@@ -1,0 +1,204 @@
+{
+  "metadata": {
+    "version": "0.1.0",
+    "generated": "2026-06-24T15:59:05Z",
+    "datasets": {
+      "reference": "ARCO-ERA5 ar/1959-2022-6h-240x121 conservative (1.5 deg, 6-hourly)",
+      "reference_period": "1959-2021",
+      "event_value_source": "ARCO-ERA5 ar/full_37-1h-0p25deg-chunk-1.zarr-v3 (0.25 deg, hourly)",
+      "scaling": "CMIP6 daily tasmax, historical+ssp585, member r1i1p1f1",
+      "scaling_gwl_from": "CMIP6 monthly tas (Amon), per-model GSAT 20-yr running mean vs 1850-1900"
+    },
+    "gwl_baseline": "1850-1900",
+    "gmst_covariate_source": "NOAAGlobalTemp (GCAG) annual global mean, re-referenced to 1850-1900 (stands in for HadCRUT5; Met Office host not reachable in this build)",
+    "present_gmst_anom": 1.2558,
+    "block": "annual maxima",
+    "gev_convention": "scipy.stats.genextreme; shape == c == -xi. CDF F(x)=exp(-(1-c*z)^(1/c)), z=(x-loc)/scale; c=0 -> Gumbel. Return period = 1/(1-F).",
+    "metrics_defined": {
+      "regional_mean_tasmax": "Regional-mean daily maximum temperature",
+      "tx3x": "Hottest 3-day mean of regional-mean daily tasmax (TX3x)"
+    },
+    "offsets_note": "Reference GEV uses 1.5 deg 6-hourly ERA5 (daily max from 6-hourly sampling biases slightly low); the live event value uses 0.25 deg hourly ERA5T. Apply the documented product offset before evaluating a live value.",
+    "notes": "obs-anchored NS-GEV present; CMIP6 change-factors for future; per-model GWL covariate fit; shape held constant across warming levels."
+  },
+  "regions": {
+    "france": {
+      "name": "France (metropolitan)",
+      "bbox": [
+        -5.0,
+        41.0,
+        9.5,
+        51.5
+      ],
+      "metrics": {
+        "regional_mean_tasmax": {
+          "name": "Regional-mean daily maximum temperature",
+          "units": "degC",
+          "gev_present": {
+            "loc": 28.0631,
+            "scale": 1.146,
+            "shape": 0.2453,
+            "covariate": "GMST",
+            "dloc_dGMST": 2.9109,
+            "ref_gmst_anom": 1.2558
+          },
+          "fit_diagnostics": {
+            "n_years": 63,
+            "nllf": 98.817,
+            "aic": 205.634,
+            "converged": true,
+            "stationary_loc": 26.0898,
+            "stationary_scale": 1.4386,
+            "stationary_shape": 0.2037
+          },
+          "scaling_per_gwl": {
+            "dloc_dGWL": 1.5957,
+            "dscale_dGWL": 0.0055,
+            "source": "CMIP6 ensemble median (per-model GWL covariate NS-GEV)",
+            "spread": {
+              "p17": 1.4180762679872663,
+              "p83": 1.974254573963683,
+              "dscale_p17": -0.06796835184270845,
+              "dscale_p83": 0.04362318959475535,
+              "n_models": 24
+            },
+            "models": [
+              "ACCESS-CM2",
+              "ACCESS-ESM1-5",
+              "AWI-CM-1-1-MR",
+              "CMCC-ESM2",
+              "CanESM5",
+              "EC-Earth3",
+              "EC-Earth3-CC",
+              "EC-Earth3-Veg-LR",
+              "FGOALS-g3",
+              "GFDL-CM4",
+              "GFDL-ESM4",
+              "INM-CM4-8",
+              "INM-CM5-0",
+              "IPSL-CM6A-LR",
+              "KACE-1-0-G",
+              "KIOST-ESM",
+              "MIROC6",
+              "MPI-ESM1-2-HR",
+              "MPI-ESM1-2-LR",
+              "MRI-ESM2-0",
+              "NESM3",
+              "NorESM2-LM",
+              "NorESM2-MM",
+              "TaiESM1"
+            ]
+          },
+          "warming_levels": {
+            "1.5": {
+              "loc": 28.4528,
+              "scale": 1.1473,
+              "shape": 0.2453
+            },
+            "2.0": {
+              "loc": 29.2507,
+              "scale": 1.1501,
+              "shape": 0.2453
+            },
+            "3.0": {
+              "loc": 30.8464,
+              "scale": 1.1555,
+              "shape": 0.2453
+            }
+          }
+        },
+        "tx3x": {
+          "name": "Hottest 3-day mean of regional-mean daily tasmax (TX3x)",
+          "units": "degC",
+          "gev_present": {
+            "loc": 27.1539,
+            "scale": 1.1914,
+            "shape": 0.1889,
+            "covariate": "GMST",
+            "dloc_dGMST": 2.671,
+            "ref_gmst_anom": 1.2558
+          },
+          "fit_diagnostics": {
+            "n_years": 63,
+            "nllf": 103.544,
+            "aic": 215.087,
+            "converged": true,
+            "stationary_loc": 25.3472,
+            "stationary_scale": 1.4055,
+            "stationary_shape": 0.148
+          },
+          "scaling_per_gwl": {
+            "dloc_dGWL": 1.6122,
+            "dscale_dGWL": -0.0014,
+            "source": "CMIP6 ensemble median (per-model GWL covariate NS-GEV)",
+            "spread": {
+              "p17": 1.4204011298796988,
+              "p83": 2.0231611630572934,
+              "dscale_p17": -0.06672842321451294,
+              "dscale_p83": 0.03992173554534168,
+              "n_models": 24
+            },
+            "models": [
+              "ACCESS-CM2",
+              "ACCESS-ESM1-5",
+              "AWI-CM-1-1-MR",
+              "CMCC-ESM2",
+              "CanESM5",
+              "EC-Earth3",
+              "EC-Earth3-CC",
+              "EC-Earth3-Veg-LR",
+              "FGOALS-g3",
+              "GFDL-CM4",
+              "GFDL-ESM4",
+              "INM-CM4-8",
+              "INM-CM5-0",
+              "IPSL-CM6A-LR",
+              "KACE-1-0-G",
+              "KIOST-ESM",
+              "MIROC6",
+              "MPI-ESM1-2-HR",
+              "MPI-ESM1-2-LR",
+              "MRI-ESM2-0",
+              "NESM3",
+              "NorESM2-LM",
+              "NorESM2-MM",
+              "TaiESM1"
+            ]
+          },
+          "warming_levels": {
+            "1.5": {
+              "loc": 27.5476,
+              "scale": 1.1911,
+              "shape": 0.1889
+            },
+            "2.0": {
+              "loc": 28.3537,
+              "scale": 1.1904,
+              "shape": 0.1889
+            },
+            "3.0": {
+              "loc": 29.9659,
+              "scale": 1.189,
+              "shape": 0.1889
+            }
+          }
+        }
+      },
+      "sensitivity_crosscheck": {
+        "regional_mean_tasmax": {
+          "obs_dloc_dGMST": 2.9109,
+          "cmip_dloc_dGWL": 1.5957,
+          "ratio": 1.824,
+          "flagged_disagreement": false
+        },
+        "tx3x": {
+          "obs_dloc_dGMST": 2.671,
+          "cmip_dloc_dGWL": 1.6122,
+          "ratio": 1.657,
+          "flagged_disagreement": false
+        }
+      },
+      "cmip6_models_failed": []
+    }
+  }
+}
