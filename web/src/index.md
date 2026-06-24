@@ -113,17 +113,73 @@ Plot.plot({
 
 ## Where it gets more likely
 
+The spatial complement: at each cell, how much more likely an event of the local
+intensity becomes at a chosen warming level, relative to today. Redder is a
+larger increase in the odds.
+
 ```js
 const grid = await FileAttachment("data/grid_europe.json").json();
 ```
 
 ```js
-grid
-  ? html`<div class="note">Gridded field loaded (${grid.cells?.length ?? 0} cells).
-      Map rendering is wired in the map component step.</div>`
+const mapGwl = grid
+  ? view(Inputs.radio(grid.warming_levels, {value: "2.0", label: "Warming level (°C)"}))
+  : null;
+```
+
+```js
+function ratioMap(grid, metric, gwl, width) {
+  const cells = grid.metrics[metric].cells.filter(d => d.ratio[gwl] != null);
+  const boxes = Object.values(lookup.regions).map(r => ({
+    x1: r.bbox[0], y1: r.bbox[1], x2: r.bbox[2], y2: r.bbox[3], name: r.name
+  }));
+  const maxRatio = Math.max(10, d3.quantile(cells, 0.98, d => d.ratio[gwl]) ?? 10);
+  return Plot.plot({
+    width,
+    height: Math.round(width * 0.62),
+    marginLeft: 44,
+    aspectRatio: 1 / Math.cos((46 * Math.PI) / 180),
+    x: {label: "Longitude", grid: false},
+    y: {label: "Latitude", grid: false},
+    color: {
+      type: "log", scheme: "YlOrRd", clamp: true,
+      domain: [1, maxRatio], legend: true,
+      label: `× more likely at +${gwl} °C vs today`
+    },
+    marks: [
+      Plot.cell(cells, {
+        x: "lon", y: "lat", fill: d => Math.max(1, d.ratio[gwl]), inset: -0.5,
+        tip: true,
+        channels: {
+          "lon": "lon", "lat": "lat",
+          "event value (°C)": "x_obs",
+          "now (1-in, yr)": "present_rp",
+          [`at +${gwl} (1-in, yr)`]: d => d.rp[gwl],
+          [`× vs now`]: d => d.ratio[gwl]
+        }
+      }),
+      Plot.rect(boxes, {x1: "x1", y1: "y1", x2: "x2", y2: "y2",
+        stroke: "#1a1a1a", strokeWidth: 1.2, fill: "none"}),
+      Plot.frame({stroke: "#ccc"})
+    ]
+  });
+}
+```
+
+```js
+grid && mapGwl
+  ? ratioMap(grid, metric, mapGwl, width)
   : html`<div class="note">The spatial probability-ratio map is produced by the
-      gridded precompute (<code>output/grid_europe.json</code>). Run it to enable
-      this panel.</div>`
+      gridded precompute (<code>output/grid_europe.json</code>). Run
+      <code>python -m precompute.grid</code> to enable this panel.</div>`
+```
+
+```js
+grid
+  ? html`<div class="note">${grid.metrics[metric].cells.length} cells on the
+      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. The boxes
+      outline the predefined regions.</div>`
+  : null
 ```
 
 ## What the current value is built from

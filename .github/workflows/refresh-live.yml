@@ -1,0 +1,52 @@
+name: Refresh live event value
+
+# Scheduled job (separate from the heavy precompute) that re-blends ERA5T with
+# the latest ECMWF forecast and refreshes the event field of the map, then
+# commits the updated outputs. The commit to main triggers the Pages deploy.
+#
+# The precompute cache (per-model CMIP fits, ERA5 present grid) is restored
+# across runs, so only the live ERA5T and forecast reads happen each time; the
+# static present and change-factor fields are reused.
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-live
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Restore precompute cache
+        uses: actions/cache@v4
+        with:
+          path: cache
+          key: precompute-cache-${{ hashFiles('precompute/**.py') }}
+          restore-keys: precompute-cache-
+      - name: Refresh live value and grid event field
+        run: |
+          python -m precompute.live_value --region france
+          python -m precompute.grid
+      - name: Commit refreshed outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/live_france.json output/grid_europe.json
+          if git diff --cached --quiet; then
+            echo "no changes to commit"
+          else
+            git commit -m "Refresh live event value and grid"
+            git push
+          fi
