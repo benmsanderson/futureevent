@@ -10,3 +10,6 @@ dask
 intake-esm
 aiohttp
 requests
+# forecast blend (ECMWF IFS HRES open data, GRIB2)
+cfgrib
+eccodes

@@ -47,19 +47,31 @@ A present-day record-class France heatwave (about 1-in-46 now) becomes roughly
 probability ratios across the warming axis are in line with WWA-style attribution
 framing for major European heatwaves.
 
-## Live June 2026 event value
+## Live June 2026 event value (ERA5T + ECMWF forecast blend)
 
-At the build date (2026-06-24) ERA5T had ingested France data only through
-2026-06-17 (about a 5-day to 7-day latency), so the June 20-23 heatwave peak was
-not yet available; the June 1-17 maximum (26.8 degC regional mean) is an ordinary
-early-summer value. The pipeline still resolves the live path end to end: when
-ERA5T catches up, or once the ECMWF forecast blend is added, the live value flows
-through `sanity_check.py` unchanged.
+At the build date (2026-06-24) ERA5T had ingested France only through 2026-06-17
+(about 5-7 day latency), so the unfolding heatwave is supplied by the ECMWF HRES
+forecast. The blend uses ERA5T for June 4-17, an older long-horizon cycle
+(2026-06-15 12z) to fill June 18-23, and the freshest cycle (2026-06-24 06z) for
+June 24-29. The forecast reads 0.85 degC cooler than ERA5T over the overlap days
+(3-6 hourly vs hourly sampling) and is bias-corrected onto the ERA5T footing; the
+whole series is then shifted by the ERA5T-vs-reference offset (+0.88 degC,
+estimated over June 2021) onto the reference GEV footing.
 
-Product offset (live 0.25 deg hourly ERA5T minus 1.5 deg 6-hourly reference),
-estimated over June 2021: +0.88 degC. The finer grid and hourly sampling read
-warmer; subtract this offset to place a live value on the reference GEV footing
-before evaluating.
+Blended event values on the reference footing, and their rarity:
+
+| metric | peak (degC) | peak day | present | +1.5 | +2.0 | +3.0 |
+| --- | --- | --- | --- | --- | --- | --- |
+| regional_mean_tasmax | 31.3 | 2026-06-24 | 1-in-113 yr | 1-in-43 (2.6x) | 1-in-10 (10.8x) | 1-in-2 (56x) |
+| tx3x | 30.6 | 2026-06-26 | 1-in-67 yr | 1-in-34 (2.0x) | 1-in-11 (6.1x) | 1-in-2 (29x) |
+
+The live June 2026 France heatwave is, on the reference footing, a roughly
+1-in-100-year regional-mean daily extreme in the present climate. It becomes
+about 1-in-10 at +2 degC (about 11 times more likely) and near-annual at +3 degC.
+The full live record, with per-day source and provenance, is in
+`output/live_france.json`. See `precompute/live_value.py` to regenerate it
+(`python -m precompute.live_value --region france`); the value moves with each
+new forecast cycle and as ERA5T catches up.
 
 ## Reproduce
 
