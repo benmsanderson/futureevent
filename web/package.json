@@ -1,0 +1,22 @@
+{
+  "type": "module",
+  "private": true,
+  "name": "futureevent-web",
+  "version": "0.1.0",
+  "description": "Future-climate rarity context for extreme heat events (static frontend)",
+  "scripts": {
+    "dev": "observable preview",
+    "build": "observable build",
+    "clean": "observable clean"
+  },
+  "dependencies": {
+    "@observablehq/framework": "^1.13.0",
+    "@observablehq/plot": "^0.6.17",
+    "d3": "^7.9.0",
+    "htl": "^1.0.0",
+    "topojson-client": "^3.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
+}

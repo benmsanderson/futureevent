@@ -145,3 +145,22 @@ after the first run. Use `--no-cache` to force a re-read.
 This tool is contextualization, not attribution. Prose avoids em-dashes. The
 pipeline is parameterised by region and metric (tier-2 ready) but ships the
 single-event France path first.
+
+## Frontend (`web/`)
+
+A static Observable Framework site (built to plain HTML/JS, deployed to GitHub
+Pages) consumes `output/lookup.json`, `output/live_<region>.json`, and the
+gridded `output/grid_<domain>.json`. It needs no backend and no runtime data
+access: `web/src/components/gev.js` is a direct port of `precompute/runtime.py`,
+so return periods are recomputed in the browser. Pages: the event page (headline
+odds/frequency, return-period-vs-warming chart, distribution small-multiples,
+probability-ratio map) and a methods/provenance page, with the "contextualization,
+not attribution" framing throughout.
+
+```bash
+cd web && npm install
+# offline only: pre-populate the npm cache (CI reaches jsdelivr and skips this)
+node prebundle.mjs
+npm run build      # static site in web/dist
+npm run dev        # local preview
+```

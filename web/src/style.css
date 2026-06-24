@@ -1,0 +1,47 @@
+/* Minimal styling for the single-event page. */
+:root {
+  --hot: #b30000;
+  --ink: #1a1a1a;
+  --muted: #666;
+}
+
+.headline {
+  font-size: 1.25rem;
+  line-height: 1.5;
+  padding: 1rem 1.2rem;
+  border-left: 4px solid var(--hot);
+  background: #fff5f2;
+  border-radius: 4px;
+  margin: 1rem 0;
+}
+.headline b { color: var(--hot); }
+
+.note {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-style: italic;
+  margin: 0.5rem 0 1rem;
+}
+
+.provenance {
+  font-size: 0.9rem;
+  color: var(--muted);
+  border-top: 1px solid #eee;
+  padding-top: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+table.prov {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 1rem;
+}
+table.prov th, table.prov td {
+  text-align: left;
+  padding: 0.35rem 0.8rem 0.35rem 0;
+  vertical-align: top;
+  border-bottom: 1px solid #eee;
+}
+table.prov th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+
+.models { font-size: 0.85rem; color: var(--muted); }
