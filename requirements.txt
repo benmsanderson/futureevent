@@ -1,0 +1,12 @@
+# Offline precompute pipeline for the future-climate rarity tool.
+# Pinned loosely; tested with the versions resolved in June 2026.
+numpy
+pandas
+scipy
+xarray
+zarr
+gcsfs
+dask
+intake-esm
+aiohttp
+requests
