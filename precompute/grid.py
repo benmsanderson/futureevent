@@ -21,6 +21,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import pandas as pd
@@ -31,6 +32,8 @@ from .gev import exceedance_prob, fit_nonstationary
 
 DOMAIN = {"name": "europe", "bbox": [-10.0, 36.0, 25.0, 56.0]}
 MIN_YEARS = 40
+# Leave one core free; the per-cell GEV fits parallelise cleanly across cells.
+_FIT_WORKERS = max(1, (os.cpu_count() or 2) - 1)
 
 
 # --------------------------------------------------------------------------
@@ -47,35 +50,50 @@ def _annual_max_field(daily: xr.DataArray, window_days: int,
     return amax.swap_dims({"time": "year"}).drop_vars("time")
 
 
+def _fit_cell(payload):
+    """Worker: fit one cell. payload = (j, i, y, g, fit_scale)."""
+    j, i, y, g, fit_scale = payload
+    try:
+        f = fit_nonstationary(y, g, covariate_name="cov",
+                              fit_scale_covariate=fit_scale)
+    except Exception:  # noqa: BLE001
+        return (j, i, None)
+    return (j, i, (f.shape, f.loc0, f.dloc, f.scale0, f.dscale))
+
+
 def _fit_field(amax: xr.DataArray, cov: pd.Series, fit_scale: bool):
-    """Fit a non-stationary GEV at every cell; return parameter arrays."""
+    """Fit a non-stationary GEV at every cell (parallel); return param arrays."""
     la, lo = metrics.lat_name(amax), metrics.lon_name(amax)
     years = amax["year"].values
     g = cov.reindex(years).values
     lats, lons = amax[la].values, amax[lo].values
     vals = amax.transpose("year", la, lo).values  # (year, nlat, nlon)
-    ny, nlat, nlon = vals.shape
+    _, nlat, nlon = vals.shape
     shape = np.full((nlat, nlon), np.nan)
     loc0 = np.full((nlat, nlon), np.nan)
     dloc = np.full((nlat, nlon), np.nan)
     scale0 = np.full((nlat, nlon), np.nan)
     dscale = np.full((nlat, nlon), np.nan)
+
+    jobs = []
     for j in range(nlat):
         for i in range(nlon):
             y = vals[:, j, i]
             m = np.isfinite(y) & np.isfinite(g)
-            if m.sum() < MIN_YEARS:
-                continue
-            try:
-                f = fit_nonstationary(y[m], g[m], covariate_name="cov",
-                                      fit_scale_covariate=fit_scale)
-            except Exception:  # noqa: BLE001
-                continue
-            shape[j, i] = f.shape
-            loc0[j, i] = f.loc0
-            dloc[j, i] = f.dloc
-            scale0[j, i] = f.scale0
-            dscale[j, i] = f.dscale
+            if m.sum() >= MIN_YEARS:
+                jobs.append((j, i, y[m], g[m], fit_scale))
+
+    if _FIT_WORKERS > 1 and len(jobs) > 8:
+        with ProcessPoolExecutor(max_workers=_FIT_WORKERS) as ex:
+            results = ex.map(_fit_cell, jobs, chunksize=8)
+            collected = list(results)
+    else:
+        collected = [_fit_cell(p) for p in jobs]
+
+    for j, i, params in collected:
+        if params is None:
+            continue
+        shape[j, i], loc0[j, i], dloc[j, i], scale0[j, i], dscale[j, i] = params
     return {"lats": lats, "lons": lons, "shape": shape, "loc0": loc0,
             "dloc": dloc, "scale0": scale0, "dscale": dscale}
 
@@ -125,16 +143,14 @@ def _model_gwl_cached(model: str) -> pd.Series:
     return cmip6.model_gwl(model)
 
 
-def _regrid_to_ref(arr, lats, lons, ref_lats, ref_lons) -> np.ndarray:
-    """Interp a (lat, lon) parameter field onto the reference grid (-180 frame)."""
-    da = xr.DataArray(arr, coords={"latitude": lats, "longitude": lons},
-                      dims=("latitude", "longitude"))
-    out = da.interp(latitude=ref_lats, longitude=ref_lons)
-    return out.transpose("latitude", "longitude").values
-
-
 def _model_grid(model: str, ref_lats, ref_lons, use_cache: bool = True) -> dict | None:
-    """Per-model change factors fit on the native grid, regridded to the ref grid."""
+    """Per-model change factors on the reference grid.
+
+    The model annual maxima are interpolated to the reference grid first, so the
+    GEV is fit at the ~320 reference cells rather than at the model's native
+    resolution (which can be many thousands of cells for a high-resolution
+    model). The fit is therefore on the common target grid.
+    """
     cache = os.path.join(config.CACHE_DIR, f"grid_cmip6_{DOMAIN['name']}_{model}.json")
     if use_cache and os.path.exists(cache):
         with open(cache) as fh:
@@ -149,8 +165,17 @@ def _model_grid(model: str, ref_lats, ref_lons, use_cache: bool = True) -> dict 
                 return None
             dam = cmip6._open(z)["tasmax"]
             dam.attrs.setdefault("units", "K")
+            # skip downloading any post-2100 extension (some ssp585 runs reach
+            # 2300); the change-factor fit is capped at 2100 regardless
+            dam = dam.sel(time=slice(None, str(config.CMIP6_FIT_END_YEAR)))
             subm = _to_180(metrics.subset_bbox(dam, DOMAIN["bbox"]))
+            la, lo = metrics.lat_name(subm), metrics.lon_name(subm)
+            # sample the model to the reference cells (nearest) before loading,
+            # so only ~320 cells are materialised rather than the full native
+            # high-resolution field
+            subm = subm.sel({la: ref_lats, lo: ref_lons}, method="nearest")
             daily = metrics.to_celsius(metrics.daily_tasmax(subm)).load()
+            daily = daily.assign_coords({la: ref_lats, lo: ref_lons})
             for mkey, mcfg in config.METRICS.items():
                 parts[mkey].append(_annual_max_field(daily, mcfg["window_days"]))
     except Exception as exc:  # noqa: BLE001
@@ -162,12 +187,8 @@ def _model_grid(model: str, ref_lats, ref_lons, use_cache: bool = True) -> dict 
         amax = xr.concat(parts[mkey], dim="year").sortby("year")
         amax = amax.sel(year=amax["year"] <= config.CMIP6_FIT_END_YEAR)
         fit = _fit_field(amax, gwl, config.MODEL_FIT_SCALE_COVARIATE)
-        res["metrics"][mkey] = {
-            "dloc": _regrid_to_ref(fit["dloc"], fit["lats"], fit["lons"],
-                                   ref_lats, ref_lons).tolist(),
-            "dscale": _regrid_to_ref(fit["dscale"], fit["lats"], fit["lons"],
-                                     ref_lats, ref_lons).tolist(),
-        }
+        res["metrics"][mkey] = {"dloc": np.asarray(fit["dloc"]).tolist(),
+                                "dscale": np.asarray(fit["dscale"]).tolist()}
     with open(cache, "w") as fh:
         json.dump(res, fh)
     return res
