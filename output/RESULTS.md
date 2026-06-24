@@ -73,10 +73,34 @@ The full live record, with per-day source and provenance, is in
 (`python -m precompute.live_value --region france`); the value moves with each
 new forecast cycle and as ERA5T catches up.
 
+## Spatial probability-ratio map (grid_europe.json)
+
+The map mirrors the point method at every cell of a Europe box (lon -10..25,
+lat 36..56) on the 1.5 deg reference grid: per-cell obs-anchored present GEV from
+ERA5, per-cell CMIP6 ensemble-median change factors (24 models, each sampled to
+the reference cells before fitting), and a per-cell event value from the ERA5T +
+forecast blend. Each cell carries the event value, the present return period, and
+the probability ratio at each warming level.
+
+For the June 2026 event the high-ratio cells cluster over southern France,
+northern Spain, and northern Italy (the heat dome): the local extreme there
+becomes up to roughly 35x more likely at +2 degC, while most of the domain shows
+a ratio near 1 (the late-June window was an ordinary day away from the dome),
+which is the expected signature of a localized event. Ten of 322 cells have a
+present return period of 5 years or more (the event core).
+
+Caveat: per-cell GEV fits are fragile in the tail. A value sitting just below a
+cell's fitted (bounded) upper limit can yield an enormous return period at that
+single cell; the map colours by the probability ratio with a clamped 98th
+percentile domain so such artifacts do not dominate the visual, but individual
+cell return periods in the deep tail should be read with care.
+
 ## Reproduce
 
 ```bash
 python -m precompute.build_lookup --regions france --out output/lookup.json
 python -m precompute.sanity_check --lookup output/lookup.json --region france \
     --x-obs 30.9        # 2019-class record on the reference footing
+python -m precompute.live_value --region france    # blended live event value
+python -m precompute.grid                          # gridded map (grid_europe.json)
 ```
