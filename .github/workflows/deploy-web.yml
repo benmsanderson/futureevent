@@ -5,7 +5,7 @@ name: Deploy web to GitHub Pages
 # Pages once under Settings > Pages > Source: GitHub Actions.
 on:
   push:
-    branches: [main]
+    branches: [claude/cool-brahmagupta-4zz1r1]
     paths:
       - "web/**"
       - "output/**"
@@ -38,6 +38,8 @@ jobs:
       - run: npm run build
         env:
           OBSERVABLE_TELEMETRY_DISABLE: "true"
+          # Project page lives at https://benmsanderson.github.io/futureevent/
+          PAGES_BASE: "/futureevent/"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist
