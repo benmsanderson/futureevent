@@ -284,7 +284,11 @@ function localContourMap(g, borders, width, opts) {
       ...base.under,
       Plot.contour(cells, {
         x: "lon", y: "lat", fill: opts.field,
-        interpolate: "barycentric", blur: opts.blur ?? 2, thresholds: opts.thresholds,
+        // Sample the contour grid coarsely (the 0.25° data is far coarser than
+        // the screen anyway, and the output is smooth vector paths) — far less
+        // rasterising work, so the map renders quickly when scrolled into view.
+        interpolate: "barycentric", pixelSize: 6,
+        blur: opts.blur ?? 1, thresholds: opts.thresholds,
         stroke: opts.iso, strokeWidth: 0.5, strokeOpacity: 0.5, clip: borders
       }),
       ...base.over,
@@ -316,7 +320,7 @@ function localRpMap(g, borders, metric, level, width) {
   return localContourMap(g, borders, width, {
     metricKey: metric,
     bbox: lookup.regions[region].bbox, // clip the coarse Europe grid to France
-    blur: 7, // wider averaging kernel — smooths the coarse 1.5° field
+    blur: 3, // wider kernel for the coarse 1.5° field (×3 at pixelSize 3 ≈ 9 px)
     thresholds: RP_THRESHOLDS, colors: RP_COLORS, iso: "#33333a",
     tickFormat: (d) => `1-in-${d}`,
     label: `How often this heat hits ${level === "now" ? "now" : LEVEL_LABEL[level]} (1-in-N years)`,
@@ -365,10 +369,36 @@ const mapView = view((() => {
 })());
 ```
 
+<div id="maps-sentinel"></div>
+
 ```js
-mapView === "How hot it gets"
-  ? localTempMap(gridHires, borders, mapLevel, width)
-  : localRpMap(grid, borders, metric, mapLevel, width)
+// Defer the heavy contour maps until they scroll near the viewport, so the
+// headline and charts paint immediately instead of waiting on the rasteriser.
+const showMaps = Generators.observe((notify) => {
+  notify(false);
+  let fired = false;
+  const setup = () => {
+    const el = document.querySelector("#maps-sentinel");
+    if (!el) return void requestAnimationFrame(setup);
+    const io = new IntersectionObserver((entries) => {
+      if (!fired && entries.some((e) => e.isIntersecting)) {
+        fired = true;
+        notify(true);
+        io.disconnect();
+      }
+    }, {rootMargin: "500px 0px"});
+    io.observe(el);
+  };
+  requestAnimationFrame(setup);
+});
+```
+
+```js
+showMaps
+  ? (mapView === "How hot it gets"
+      ? localTempMap(gridHires, borders, mapLevel, width)
+      : localRpMap(grid, borders, metric, mapLevel, width))
+  : html`<div class="map-placeholder">The map loads as you scroll here…</div>`
 ```
 
 ```js
