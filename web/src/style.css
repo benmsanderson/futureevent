@@ -65,3 +65,9 @@ table.prov th, table.prov td {
 table.prov th { color: var(--muted); font-weight: 600; white-space: nowrap; }
 
 .models { font-size: 0.85rem; color: var(--muted); }
+
+/* The warming-level slider's value is a named climate (shown in the guidance
+   note below it), not a number, so hide Inputs.range's blank numeric box. */
+input[type="number"]:has(+ input[type="range"]) {
+  display: none;
+}

@@ -173,7 +173,6 @@ Plot.plot({
 ```
 
 ```js
-const grid = await FileAttachment("data/grid_europe.json").json();
 const borders = await FileAttachment("data/europe_borders.json").json();
 ```
 
@@ -210,6 +209,16 @@ const LEVEL_LABEL = {
   "0.0": "in 1850–1900", "1.0": "at ~1 °C (recent past)", "now": "now",
   "1.5": "at +1.5 °C", "2.0": "at +2 °C", "3.0": "at +3 °C"
 };
+// Ordered slider stops (cool → warm) for the local-peak maps, and their labels.
+const LEVEL_KEYS = ["0.0", "1.0", "now", "1.5", "2.0", "3.0"];
+const LEVEL_NAMES = ["1850–1900", "Recent ~1 °C", "Now", "+1.5 °C", "+2 °C", "+3 °C"];
+const NOW_INDEX = 2;
+// Weather-map style discrete bands: filled categories + contour lines.
+const TEMP_THRESHOLDS = [21, 24, 27, 30, 33, 36, 39];
+const TEMP_COLORS = ["#ffffb2", "#fee391", "#fec44f", "#fe9929", "#ec7014",
+  "#cc4c02", "#a40d0d", "#6d0000"];
+const RP_THRESHOLDS = [2, 5, 10, 30, 100];
+const RP_COLORS = ["#c7ccd1", "#9aa1ab", "#74cddd", "#27a8c4", "#8a63b0", "#5e2d91"];
 
 // Sea/land basemap, projection and frame shared by both maps.
 function mapBase(grid, borders, width) {
@@ -254,179 +263,98 @@ function tempAtLevel(d, metric, level) {
   const s = intensityScaling(metric);
   return s == null ? NaN : d.x_obs + s * (Number(level) - lookup.metadata.present_gmst_anom);
 }
-```
 
-## How hot — an equally rare event in a warmer world
-
-This map holds the event's **rarity** fixed and asks how **hot** it would be.
-*Now* is the temperature the event actually reached; drag **Global warming** —
-back to the cooler **1850–1900** climate or up toward **+3 °C** — and each cell
-shows how hot an *equally rare* event would be in that climate. The same
-once-in-a-generation heat, cooler in the past and hotter in the future.
-
-```js
-const heatLevel = grid
-  ? view(Inputs.radio(LEVELS, {value: "now", label: "Global warming"}))
-  : null;
-```
-
-```js
-function intensityMap(grid, borders, metric, level, width) {
-  const base = mapBase(grid, borders, width);
-  const cells = grid.metrics[metric].cells;
-  // Fix the colour domain across the full climate span (coolest pre-industrial
-  // to hottest +3 °C) so the warming shift is visible as the slider moves.
-  const lo = d3.min(cells, (d) => tempAtLevel(d, metric, "0.0"));
-  const hi = d3.max(cells, (d) => tempAtLevel(d, metric, "3.0"));
+// Weather-map style local-peak field: filled discrete bands plus thin contour
+// lines, from the 0.25° local_txx grid. `field` picks the quantity per cell.
+function localContourMap(g, borders, width, opts) {
+  const base = mapBase(g, borders, width);
+  const cells = g.metrics.local_txx.cells;
   return Plot.plot({
     ...base,
-    color: {
-      type: "linear", scheme: "YlOrRd", clamp: true, domain: [lo, hi], legend: true,
-      label: level === "now"
-        ? "Temperature reached (°C)"
-        : `Temperature of an equally rare event ${LEVEL_LABEL[level]}`
-    },
+    color: {type: "threshold", domain: opts.thresholds, range: opts.colors,
+      legend: true, label: opts.label, tickFormat: opts.tickFormat},
     marks: [
       ...base.under,
-      Plot.raster(cells, {
-        x: "lon", y: "lat", fill: (d) => tempAtLevel(d, metric, level),
-        interpolate: "barycentric", blur: 3, clip: borders
+      Plot.contour(cells, {
+        x: "lon", y: "lat", fill: opts.field,
+        interpolate: "barycentric", blur: 2, thresholds: opts.thresholds,
+        stroke: opts.iso, strokeWidth: 0.5, strokeOpacity: 0.5, clip: borders
       }),
       ...base.over,
-      Plot.dot(cells, {
-        x: "lon", y: "lat", r: 6, fill: "transparent", stroke: "none", tip: true,
-        channels: {
-          "held rarity": (d) => fmtRp(d.present_rp),
-          "1850–1900 (°C)": (d) => round1(tempAtLevel(d, metric, "0.0")),
-          "now (°C)": (d) => round1(d.x_obs),
-          "+1.5 (°C)": (d) => round1(tempAtLevel(d, metric, "1.5")),
-          "+2 (°C)": (d) => round1(tempAtLevel(d, metric, "2.0")),
-          "+3 (°C)": (d) => round1(tempAtLevel(d, metric, "3.0"))
-        }
-      })
+      Plot.dot(cells, {x: "lon", y: "lat", r: 5, fill: "transparent", stroke: "none",
+        tip: true, channels: opts.channels})
     ]
+  });
+}
+
+function localTempMap(g, borders, level, width) {
+  return localContourMap(g, borders, width, {
+    thresholds: TEMP_THRESHOLDS, colors: TEMP_COLORS, iso: "#7f2704",
+    tickFormat: (d) => `${d}°`,
+    label: level === "now"
+      ? "Local peak reached (°C)"
+      : `Local peak of an equally rare event ${LEVEL_LABEL[level]} (°C)`,
+    field: (d) => tempAtLevel(d, "local_txx", level),
+    channels: {
+      "now (°C)": (d) => round1(d.x_obs),
+      "1850–1900 (°C)": (d) => round1(tempAtLevel(d, "local_txx", "0.0")),
+      "+2 °C (°C)": (d) => round1(tempAtLevel(d, "local_txx", "2.0")),
+      "+3 °C (°C)": (d) => round1(tempAtLevel(d, "local_txx", "3.0"))
+    }
+  });
+}
+
+function localRpMap(g, borders, level, width) {
+  return localContourMap(g, borders, width, {
+    thresholds: RP_THRESHOLDS, colors: RP_COLORS, iso: "#33333a",
+    tickFormat: (d) => `1-in-${d}`,
+    label: `How often this peak recurs ${level === "now" ? "now" : LEVEL_LABEL[level]} (1-in-N yr)`,
+    field: (d) => rpAtLevel(d, level) ?? RP_CAP,
+    channels: {
+      "now": (d) => fmtRp(d.present_rp),
+      "1850–1900": (d) => fmtRp(d.rp["0.0"]),
+      "+2 °C": (d) => fmtRp(d.rp["2.0"]),
+      "+3 °C": (d) => fmtRp(d.rp["3.0"])
+    }
   });
 }
 ```
 
-```js
-grid
-  ? intensityMap(grid, borders, metric, heatLevel, width)
-  : html`<div class="note">The spatial maps come from the gridded precompute
-      (<code>output/grid_europe.json</code>). Run
-      <code>python -m precompute.grid</code> to enable them.</div>`
-```
+## The local peak in a warming climate
 
-```js
-grid
-  ? html`<div class="note">${grid.metrics[metric].cells.length} cells on the
-      ${grid.grid_deg}° reference grid. Each cell is a <b>1.5° gridbox daily-max
-      on the coarse (6-hourly ERA5) footing</b>, so values run several °C below
-      local station peaks — coastal cells also average in cool sea (the hottest
-      cell in the domain is ${round1(d3.max(grid.metrics[metric].cells, (d) => d.x_obs))} °C).
-      ${grid.metrics[metric].cells[0]?.rl
-        ? "Equally-rare temperatures are per-cell return levels from the grid."
-        : html`The warmer-world shift is approximated from the regional intensity
-            response (${round1(intensityScaling(metric))} °C per °C of global
-            warming, uniform across the map); per-cell return levels would come
-            from the gridded precompute.`}</div>`
-  : null
-```
-
-## How often — this event in a warmer world
-
-This map holds the event's **temperature** fixed and asks how **often** it
-recurs. A cool scale — grey where the event is common, through cyan to purple
-where it is very rare — keeps it distinct from the temperature map. Drag back to
-**1850–1900** to see how exceptional this heat once was (purple), and up toward
-**+3 °C** to watch it fade toward an ordinary grey year.
-
-```js
-const freqLevel = grid
-  ? view(Inputs.radio(LEVELS, {value: "now", label: "Global warming"}))
-  : null;
-```
-
-```js
-function frequencyMap(grid, borders, metric, level, width) {
-  const base = mapBase(grid, borders, width);
-  const cells = grid.metrics[metric].cells;
-  return Plot.plot({
-    ...base,
-    color: {
-      // Common does not vanish into the page: graduate grey (common) → cyan
-      // (rare) → purple (very rare), kept off the hot temperature palette.
-      type: "log", clamp: true,
-      domain: [1, RP_COLOUR_MAX],
-      range: ["#9aa1ab", "#1fb6cf", "#5e2d91"],
-      interpolate: "rgb", legend: true,
-      ticks: [1, 3, 10, 30, 100], tickFormat: (n) => `1-in-${n}`,
-      label: level === "now"
-        ? "Return period now — grey common, purple very rare"
-        : `Return period ${LEVEL_LABEL[level]} — grey common, purple very rare`
-    },
-    marks: [
-      ...base.under,
-      // null (beyond the GEV bound = essentially never) colours as the rarest.
-      Plot.raster(cells, {
-        x: "lon", y: "lat", fill: (d) => rpAtLevel(d, level) ?? RP_COLOUR_MAX,
-        interpolate: "barycentric", blur: 3, clip: borders
-      }),
-      ...base.over,
-      Plot.dot(cells, {
-        x: "lon", y: "lat", r: 6, fill: "transparent", stroke: "none", tip: true,
-        channels: {
-          "event (°C)": "x_obs",
-          "1850–1900": (d) => fmtRp(d.rp["0.0"]),
-          "now": (d) => fmtRp(d.present_rp),
-          "+1.5": (d) => fmtRp(d.rp["1.5"]),
-          "+2": (d) => fmtRp(d.rp["2.0"]),
-          "+3": (d) => fmtRp(d.rp["3.0"])
-        }
-      })
-    ]
-  });
-}
-```
-
-```js
-grid ? frequencyMap(grid, borders, metric, freqLevel, width) : null
-```
-
-```js
-grid
-  ? html`<div class="note">${grid.metrics[metric].cells.length} cells on the
-      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. Rarity is
-      relative to each cell's own climatology on the coarse 1.5° gridbox footing
-      (the event °C in the tooltip is the gridbox value, below local station
-      peaks). Common cells sit grey; the event's rare footprint shows
-      cyan-to-purple and fades toward grey as warming rises. Deep-tail per-cell
-      return periods are clamped at 1-in-${RP_CAP}.</div>`
-  : null
-```
-
-## The local peak — hottest gridbox, not the average
-
-The maps above are the 1.5° reference grid (a coarse gridbox average). This one
-is the **0.25° local peak** (`local_txx`): each cell's own daily-max from the
-hourly ERA5T product, over metropolitan France only. It resolves the afternoon
-peak and inland cities, so values run several °C hotter than the area average —
-closer to (though still a gridbox below) what stations read. Drag **Global
-warming** to see how hot an equally rare local peak would be in each climate.
+Two views of the **0.25° local peak** (`local_txx`) over metropolitan France —
+how hot an *equally rare* local peak would be, and how *often* this peak recurs —
+as the climate shifts. Filled bands with contour lines, weather-map style. Slide
+from the pre-industrial **1850–1900** climate up toward **+3 °C**.
 
 ```js
 const gridHires = await FileAttachment("data/grid_france_hires.json").json();
 ```
 
 ```js
-const hiresLevel = gridHires
-  ? view(Inputs.radio(LEVELS, {value: "now", label: "Global warming"}))
-  : null;
+const levelIdx = gridHires
+  ? view(Inputs.range([0, 5], {step: 1, value: NOW_INDEX, label: "Global warming",
+      format: (i) => LEVEL_NAMES[Math.round(i)]}))
+  : NOW_INDEX;
 ```
 
 ```js
+const mapLevel = LEVEL_KEYS[Math.round(levelIdx)];
+```
+
+```js
+html`<div class="note">Showing the <b>${LEVEL_NAMES[Math.round(levelIdx)]}</b> climate.
+  <b>Now</b> is today — about <b>+${round1(lookup.metadata.present_gmst_anom)} °C</b> above
+  1850&ndash;1900 (a 30-year trend through &approx;2025). <b>Recent &sim;1 °C</b> is the
+  climate of the <b>mid-2010s</b> (global warming first reached &sim;1 °C around 2015).
+  +1.5/+2/+3 °C are global-warming levels relative to pre-industrial.</div>`
+```
+
+### How hot — the local peak temperature
+
+```js
 gridHires
-  ? intensityMap(gridHires, borders, "local_txx", hiresLevel, width)
+  ? localTempMap(gridHires, borders, mapLevel, width)
   : html`<div class="note">The local-peak map comes from the 0.25° precompute
       (<code>output/grid_france_hires.json</code>). Run
       <code>python -m precompute.local_peak</code> to enable it.</div>`
@@ -435,13 +363,27 @@ gridHires
 ```js
 gridHires
   ? html`<div class="note">${gridHires.metrics.local_txx.cells.length} cells on a
-      ${gridHires.grid_deg}° grid over metropolitan France, ${gridHires.n_models}
-      CMIP6 models, present climatology ${gridHires.climatology_period.join("–")}.
-      Each cell is a <b>0.25° gridbox local daily-max</b> from hourly ERA5T — the
-      hottest cell is ${round1(d3.max(gridHires.metrics.local_txx.cells, (d) => d.x_obs))} °C,
-      still ~1–2 °C under the hottest station (ERA5 gridbox cool bias). Future
-      shifts apply CMIP6 change factors (coarse-model, interpolated to 0.25°) to
-      the fine present fit — a documented approximation.</div>`
+      ${gridHires.grid_deg}° grid over metropolitan France; present climatology
+      ${gridHires.climatology_period.join("&ndash;")}. The hottest cell is
+      ${round1(d3.max(gridHires.metrics.local_txx.cells, (d) => d.x_obs))} °C — a 0.25°
+      gridbox local daily-max from hourly ERA5T, still ~1&ndash;2 °C under the hottest
+      station. Filled bands are 3 °C wide; contour lines mark the band edges.</div>`
+  : null
+```
+
+### How rare — how often this local peak recurs
+
+```js
+gridHires ? localRpMap(gridHires, borders, mapLevel, width) : null
+```
+
+```js
+gridHires
+  ? html`<div class="note">Return period of each cell's local peak against its own
+      0.25° climatology — grey where it is a common summer value, cyan-to-purple where
+      rare. Future levels apply CMIP6 change factors (${gridHires.n_models} models,
+      coarse-model, interpolated to 0.25°) to the fine present fit, a documented
+      approximation.</div>`
   : null
 ```
 
