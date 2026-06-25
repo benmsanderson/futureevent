@@ -284,7 +284,11 @@ function localContourMap(g, borders, width, opts) {
       ...base.under,
       Plot.contour(cells, {
         x: "lon", y: "lat", fill: opts.field,
-        interpolate: "barycentric", blur: opts.blur ?? 2, thresholds: opts.thresholds,
+        // Coarse rasterising (6 device px/sample) keeps the contour cheap so it
+        // doesn't hog the main thread on load and delay the rest of the page; the
+        // barycentric interpolation + blur still render smooth, weather-style bands.
+        interpolate: "barycentric", pixelSize: 6, blur: opts.blur ?? 2,
+        thresholds: opts.thresholds,
         stroke: opts.iso, strokeWidth: 0.5, strokeOpacity: 0.5, clip: borders
       }),
       ...base.over,
