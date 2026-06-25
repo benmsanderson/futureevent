@@ -5,8 +5,9 @@
   "version": "0.1.0",
   "description": "Future-climate rarity context for extreme heat events (static frontend)",
   "scripts": {
-    "dev": "observable preview",
-    "build": "observable build",
+    "prebundle": "node prebundle.mjs",
+    "dev": "node prebundle.mjs && observable preview",
+    "build": "node prebundle.mjs && observable build",
     "clean": "observable clean"
   },
   "dependencies": {

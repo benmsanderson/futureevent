@@ -1,3 +1,9 @@
+/* Load Observable Framework's default theme first, then layer custom rules on
+   top. Without this @import, setting `style: "style.css"` in the config
+   replaces the built-in theme entirely, leaving the page with no typography or
+   layout (default browser fonts, unstyled headings). */
+@import url("observablehq:default.css");
+
 /* Minimal styling for the single-event page. */
 :root {
   --hot: #b30000;
