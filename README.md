@@ -123,6 +123,36 @@ Heavy reads are cached under `cache/` (per-region ERA5 block maxima, per-model
 CMIP6 change factors, the product offset), so re-assembling the lookup is cheap
 after the first run. Use `--no-cache` to force a re-read.
 
+On the cluster the environment is managed with `pixi` (the `cfgrib`/`eccodes`
+GRIB toolchain installs cleanly from conda-forge); `pixi install` then prefix the
+commands with `pixi run`. `pixi.toml` and `pixi.lock` are committed; the
+materialised env under `.pixi/` is not.
+
+### Local peak (TXx): France-peak headline and 0.25 deg map
+
+```bash
+# heavy, one-time: stream ERA5T 0.25 deg hourly to cached annual TXx (1991-2020).
+# This is the ~1.1 TB read; it is transfer-bound, not disk-bound (it streams the
+# whole-globe-per-timestep store, keeps only France, writes ~0 bytes of global
+# data), and self-caps at FE_MAX_WORKERS (default 24) for a shared node.
+pixi run python -m precompute.era5t_hires
+
+# France-peak headline (merged into live_france.json) + France-only 0.25 deg map
+# (output/grid_france_hires.json): CMIP6 change factors + present fit + event blend.
+pixi run python -m precompute.local_peak           # --reuse-event to skip the forecast
+```
+
+## Processed data (what is committed vs regenerated)
+
+The repo stays small: the conda env (`.pixi/`, ~1.3 GB) is ignored, and `cache/`
+is ignored by default. The one exception is the **ERA5T 0.25 deg annual-TXx
+fields** (`cache/era5t_txx_*.nc`, ~600 KB total): they distil the ~1.1 TB read
+into a few hundred KB, so they are committed as the durable copy of the expensive
+processed data and deploys never re-read the cloud for them. The small JSON the
+frontend consumes (`output/*.json`, the data contract) is also committed.
+Everything else under `cache/` (CMIP6 per-model fits, GMST, offsets, logs) is
+cheap to regenerate and stays ignored. A full checkout is therefore ~1 MB.
+
 ## Module map
 
 | Module | Responsibility |
@@ -133,6 +163,8 @@ after the first run. Use `--no-cache` to force a re-read.
 | `gev` | stationary and non-stationary GEV fit and evaluation |
 | `era5` | ERA5 annual block maxima and the obs-anchored present GEV |
 | `cmip6` | per-model GWL covariate fits and ensemble change factors |
+| `era5t_hires` | streaming ERA5T 0.25 deg reader: cached annual TXx over France |
+| `local_peak` | local_txx France-peak headline + France-only 0.25 deg grid |
 | `build_lookup` | orchestration; assembles `output/lookup.json` |
 | `runtime` | lookup evaluator (return period, exceedance, probability ratio) |
 | `forecast` | ECMWF IFS HRES open-data fetch (range-read 2t per step) |

@@ -106,9 +106,78 @@ single cell; the map colours by the probability ratio with a clamped 98th
 percentile domain so such artifacts do not dominate the visual, but individual
 cell return periods in the deep tail should be read with care.
 
+## Local-peak (TXx) metric and the France-peak headline (grid_france_hires.json)
+
+A *local* peak-temperature representation, added so the displayed severity can be
+read at station scale rather than only as the France-wide average. New metric
+`local_txx`: each cell's own annual-maximum daily-max (TXx) on the **0.25 deg
+hourly ERA5T** product, over metropolitan France — contrast with
+`regional_mean_tasmax` (area average, 1.5 deg 6-hourly). Kept out of
+`config.METRICS`, so the point lookup and `grid_europe.json` are byte-unchanged.
+
+**Cost model (the reason this moved to a cluster).** `ERA5T_STORE` is chunked one
+global timestep per chunk (721x1440, ~4.15 MB), so a multi-decade read transfers
+the whole global field per hour regardless of spatial subset. The ~1.1 TB for
+1991-2020 is therefore **network transfer, not disk**: `precompute/era5t_hires.py`
+streams it — fetch each 4 MB global chunk, subset to France in memory, fold into a
+running annual TXx, discard the global field — so it writes **zero** bytes of
+global data to disk (only a ~20 KB/year cached field). Verified: a France read
+grew disk by 100 KB and peaked at ~2.4 GB RSS, ~2 min/year. Concurrency is capped
+at `config.MAX_WORKERS` (24, good-neighbour on the shared node).
+
+**Present climatology.** Per-cell non-stationary GEV (GMST covariate) over
+1991-2020 (30 annual maxima), at every 0.25 deg cell of the France domain; 1034
+cells fall inside the Natural Earth France polygon (Spain/Italy/sea masked out).
+Sanity: the reader reproduces the known local records — 2003 peaks at 43.2 degC
+(Aquitaine) and 2019 at 44.2 degC (lower Rhone/Gard, where the 46 degC station
+record was set; the ~2 degC gap is ERA5's known gridbox cool bias).
+
+**Future scaling.** CMIP6 ensemble-median per-cell change factors (24 models),
+the coarse model fields sampled to 0.25 deg before fitting — applying a coarse
+change factor to a fine present fit is a documented approximation (it carries the
+large-scale response, not fine-scale changes in the response).
+
+**France peak for the June 2026 event.** Hottest single metropolitan-France
+0.25 deg cell (owner's chosen definition). Result:
+
+| quantity | value |
+| --- | --- |
+| hottest cell | 37.1 degC at 44.0 degN, 0.75 degW (Aquitaine) |
+| present return period | ~1-in-1 yr (exceedance 0.997) |
+| France 0.25 deg peak field | min 17.8 / mean 32.6 / max 37.1 degC |
+
+This is a deliberately honest, and somewhat anticlimactic, result. **This event is
+broad but locally moderate**: no France cell exceeded ~37 degC (well below the
+2003/2019 local records of 43-44 degC). Its exceptionality is its **France-wide
+extent** — the whole country hot at once, which is what makes the *area average*
+~1-in-50 — not any local peak. The absolute-hottest cell sits in always-hot
+Aquitaine, where 37 degC is a typical-summer value (hence ~1-in-1 and nearly
+warming-invariant). The "hottest cell" and the "most-unusual cell" have decoupled:
+the locally-rarest cells this event were in the Alps (e.g. ~28 degC, 1-in-13),
+unusual for that cold high ground but low in absolute terms. The forecast's
+3-hourly sampling explains only ~0.3-0.5 degC of the gap (the peak day is
+forecast-sourced), so 37 degC is essentially the real local peak.
+
+The headline therefore **keeps the hottest-cell value but frames it honestly**:
+the front end leads with "hot, but not a local record; this event's exceptionality
+is its France-wide extent," and only switches to a "1-in-N now -> 1-in-M at +2 degC"
+local-rarity framing for a future event whose hottest cell is genuinely rare
+(present return period >= 5 yr). The per-cell `local_txx` map remains meaningful
+cell-by-cell (each cell's own return level/period), and is shown at 0.25 deg over
+France.
+
+All emitted values are finite (`null`, never `Infinity`/`NaN`; written with
+`allow_nan=False`); `live_france.json` and `grid_france_hires.json` both
+strict-parse.
+
 ## Reproduce
 
 ```bash
+# heavy, one-time: stream ERA5T 0.25 deg -> cached annual TXx (1991-2020), <=24 CPU
+python -m precompute.era5t_hires            # ~1.1 TB transfer, ~1 hr, ~0 disk
+# France-peak headline + France-only 0.25 deg map (CMIP6 cf + present fit + event)
+python -m precompute.local_peak             # writes grid_france_hires.json, merges france_peak
+
 python -m precompute.build_lookup --regions france --out output/lookup.json
 python -m precompute.sanity_check --lookup output/lookup.json --region france \
     --x-obs 30.9        # 2019-class record on the reference footing

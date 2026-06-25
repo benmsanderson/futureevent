@@ -131,5 +131,46 @@
         }
       }
     }
+  },
+  "france_peak": {
+    "metric": "local_txx",
+    "value": 37.13,
+    "lat": 44.0,
+    "lon": -0.75,
+    "nearest_place": null,
+    "peak_day": "2026-06-24",
+    "present": {
+      "return_period_years": 1.0,
+      "exceedance_prob": 0.997118,
+      "gmst_anom": 1.3603
+    },
+    "warming_levels": {
+      "0.0": {
+        "return_period_years": 1.2,
+        "exceedance_prob": 0.830619,
+        "probability_ratio_vs_present": 0.833
+      },
+      "1.0": {
+        "return_period_years": 1.01,
+        "exceedance_prob": 0.98772,
+        "probability_ratio_vs_present": 0.991
+      },
+      "1.5": {
+        "return_period_years": 1.0,
+        "exceedance_prob": 0.998496,
+        "probability_ratio_vs_present": 1.001
+      },
+      "2.0": {
+        "return_period_years": 1.0,
+        "exceedance_prob": 0.999908,
+        "probability_ratio_vs_present": 1.003
+      },
+      "3.0": {
+        "return_period_years": 1.0,
+        "exceedance_prob": 1.0,
+        "probability_ratio_vs_present": 1.003
+      }
+    },
+    "note": "hottest single metropolitan-France 0.25 deg ERA5T cell; ERA5 gridbox values run ~1-2 degC below the hottest station (known cool bias)."
   }
 }

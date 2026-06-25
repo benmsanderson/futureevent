@@ -1,0 +1,33 @@
+[project]
+name = "futureevent"
+description = "Offline precompute pipeline for the future-climate rarity tool"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+# Mirrors the known-good local venv (Python 3.9 + zarr<3, per HANDOVER §7) and
+# adds the libraries the local-peak (TXx) cluster job needs: cfgrib/eccodes for
+# the forecast blend (conda is the path of least resistance for the ecCodes C
+# library), shapely/regionmask for the France mask, netcdf4 for the annual-TXx
+# cache, and flox to accelerate the big daily-max resample reduction.
+[dependencies]
+python = "3.9.*"
+numpy = "*"
+pandas = "*"
+scipy = "*"
+xarray = "*"
+zarr = "<3"
+gcsfs = "*"
+dask = "*"
+distributed = "*"
+intake-esm = "*"
+aiohttp = "*"
+requests = "*"
+# forecast blend (ECMWF IFS HRES open data, GRIB2)
+cfgrib = "*"
+eccodes = "*"
+# new local-peak job
+shapely = "*"
+regionmask = "*"
+netcdf4 = "*"
+flox = "*"
+bottleneck = "*"

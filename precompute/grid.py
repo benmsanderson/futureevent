@@ -32,8 +32,10 @@ from .gev import exceedance_prob, fit_nonstationary, return_level
 
 DOMAIN = {"name": "europe", "bbox": [-10.0, 36.0, 25.0, 56.0]}
 MIN_YEARS = 40
-# Leave one core free; the per-cell GEV fits parallelise cleanly across cells.
-_FIT_WORKERS = max(1, (os.cpu_count() or 2) - 1)
+# The per-cell GEV fits parallelise cleanly across cells, but on a shared fat
+# node we must stay under the good-neighbour ceiling (config.MAX_WORKERS), not
+# grab every core. Cap to MAX_WORKERS (and never more than cores-1).
+_FIT_WORKERS = max(1, min(config.MAX_WORKERS, (os.cpu_count() or 2) - 1))
 
 
 # --------------------------------------------------------------------------
@@ -61,8 +63,15 @@ def _fit_cell(payload):
     return (j, i, (f.shape, f.loc0, f.dloc, f.scale0, f.dscale))
 
 
-def _fit_field(amax: xr.DataArray, cov: pd.Series, fit_scale: bool):
-    """Fit a non-stationary GEV at every cell (parallel); return param arrays."""
+def _fit_field(amax: xr.DataArray, cov: pd.Series, fit_scale: bool,
+               min_years: int = MIN_YEARS):
+    """Fit a non-stationary GEV at every cell (parallel); return param arrays.
+
+    ``min_years`` is the minimum number of valid annual maxima a cell needs to be
+    fit. It defaults to the 1.5 deg reference's MIN_YEARS (40, suited to the
+    63-year record); the 0.25 deg local_txx climatology passes a lower value to
+    match its shorter (e.g. 1991-2020) period.
+    """
     la, lo = metrics.lat_name(amax), metrics.lon_name(amax)
     years = amax["year"].values
     g = cov.reindex(years).values
@@ -80,7 +89,7 @@ def _fit_field(amax: xr.DataArray, cov: pd.Series, fit_scale: bool):
         for i in range(nlon):
             y = vals[:, j, i]
             m = np.isfinite(y) & np.isfinite(g)
-            if m.sum() >= MIN_YEARS:
+            if m.sum() >= min_years:
                 jobs.append((j, i, y[m], g[m], fit_scale))
 
     if _FIT_WORKERS > 1 and len(jobs) > 8:

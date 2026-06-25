@@ -20,6 +20,15 @@ OUTPUT_DIR = os.path.join(REPO_DIR, "output")
 CACHE_DIR = os.environ.get("FE_CACHE_DIR", os.path.join(REPO_DIR, "cache"))
 
 # --------------------------------------------------------------------------
+# Concurrency cap (good-neighbour policy)
+# --------------------------------------------------------------------------
+# This pipeline runs on a shared fat node (no batch scheduler), so it must not
+# grab every core. MAX_WORKERS is the single ceiling for every process/thread
+# pool and Dask cluster in the pipeline; nothing should exceed it. Override with
+# FE_MAX_WORKERS if a future host has a different etiquette budget.
+MAX_WORKERS = max(1, int(os.environ.get("FE_MAX_WORKERS", "24")))
+
+# --------------------------------------------------------------------------
 # Warming-level axis (degrees C relative to 1850-1900)
 # --------------------------------------------------------------------------
 WARMING_LEVELS = [1.5, 2.0, 3.0]

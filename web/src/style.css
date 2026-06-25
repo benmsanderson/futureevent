@@ -29,6 +29,12 @@
   margin: 1rem 0;
 }
 .headline b { color: var(--hot); }
+/* The local-peak follow-on sits just under the lead headline: same accent,
+   slightly smaller and tighter so the France-wide average reads as the lead. */
+.headline-local {
+  font-size: 1.1rem;
+  margin-top: -0.5rem;
+}
 
 .note {
   color: var(--muted);

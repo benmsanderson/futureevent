@@ -37,6 +37,40 @@ html`<div class="headline">
 </div>`
 ```
 
+```js
+// Local peak: the single hottest metropolitan-France 0.25° gridbox for the
+// event (live.france_peak, from the local_txx precompute). Shown only if the
+// local-peak precompute has run; the France-wide average above stays the lead.
+//
+// The framing is adaptive and honest. A local peak is a "rare" story only where
+// the hottest cell's own climatology makes the value unusual. For a broad-but-
+// moderate event the hottest cell sits in an always-hot region (return period
+// ~1 yr), where the exceptional thing is the event's France-wide *extent*, not
+// the local peak — so we say that, rather than quoting a misleading 1-in-1 that
+// barely shifts with warming. A future event with a genuinely rare local peak
+// (rp ≥ 5) gets the "1-in-N now → 1-in-M at +2 °C" framing instead.
+const fp = live.france_peak ?? null;
+const fpRp = fp?.present?.return_period_years ?? null;
+const fp2 = fp?.warming_levels?.["2.0"] ?? null;
+const fpLoc = fp
+  ? (fp.nearest_place ?? `at ${fp.lat.toFixed(2)}°N, ${Math.abs(fp.lon).toFixed(2)}°${fp.lon < 0 ? "W" : "E"}`)
+  : "";
+fp
+  ? (fpRp != null && fpRp >= 5
+    ? html`<div class="headline headline-local">
+        Locally, the peak reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
+        — about <b>${oneInN(fpRp)}</b> in today's climate${fp2 && fp2.return_period_years != null
+          ? html`, becoming <b>${oneInN(fp2.return_period_years)}</b> at <b>+2 &deg;C</b>` : ""}.
+      </div>`
+    : html`<div class="headline headline-local">
+        Locally, the hottest gridbox reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
+        — hot, but not a local record (about what that always-warm spot sees in a
+        typical summer). This event's exceptionality is its <b>France-wide extent</b>:
+        the area average above is the rare part, not any single local peak.
+      </div>`)
+  : null
+```
+
 <div class="note">This value is a <b>France-wide average</b> of daily maximum
 temperature on a coarse reference footing (1.5°, 6-hourly ERA5) — not a local
 reading. Individual stations peak several °C higher (around 42 °C locally in this
@@ -362,6 +396,46 @@ grid
       peaks). Common cells sit grey; the event's rare footprint shows
       cyan-to-purple and fades toward grey as warming rises. Deep-tail per-cell
       return periods are clamped at 1-in-${RP_CAP}.</div>`
+  : null
+```
+
+## The local peak — hottest gridbox, not the average
+
+The maps above are the 1.5° reference grid (a coarse gridbox average). This one
+is the **0.25° local peak** (`local_txx`): each cell's own daily-max from the
+hourly ERA5T product, over metropolitan France only. It resolves the afternoon
+peak and inland cities, so values run several °C hotter than the area average —
+closer to (though still a gridbox below) what stations read. Drag **Global
+warming** to see how hot an equally rare local peak would be in each climate.
+
+```js
+const gridHires = await FileAttachment("data/grid_france_hires.json").json();
+```
+
+```js
+const hiresLevel = gridHires
+  ? view(Inputs.radio(LEVELS, {value: "now", label: "Global warming"}))
+  : null;
+```
+
+```js
+gridHires
+  ? intensityMap(gridHires, borders, "local_txx", hiresLevel, width)
+  : html`<div class="note">The local-peak map comes from the 0.25° precompute
+      (<code>output/grid_france_hires.json</code>). Run
+      <code>python -m precompute.local_peak</code> to enable it.</div>`
+```
+
+```js
+gridHires
+  ? html`<div class="note">${gridHires.metrics.local_txx.cells.length} cells on a
+      ${gridHires.grid_deg}° grid over metropolitan France, ${gridHires.n_models}
+      CMIP6 models, present climatology ${gridHires.climatology_period.join("–")}.
+      Each cell is a <b>0.25° gridbox local daily-max</b> from hourly ERA5T — the
+      hottest cell is ${round1(d3.max(gridHires.metrics.local_txx.cells, (d) => d.x_obs))} °C,
+      still ~1–2 °C under the hottest station (ERA5 gridbox cool bias). Future
+      shifts apply CMIP6 change factors (coarse-model, interpolated to 0.25°) to
+      the fine present fit — a documented approximation.</div>`
   : null
 ```
 

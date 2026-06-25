@@ -27,6 +27,36 @@ this magnitude is now and how rare it becomes at higher global warming levels.
 - **A global-warming-level axis**, not scenario-by-year: +1.5, +2, +3 °C relative
   to 1850-1900.
 
+## Two representations: France-wide average vs local peak
+
+The headline figure and the first two maps use **France-wide / coarse-gridbox
+averages** of daily maximum temperature on the 1.5° 6-hourly reference footing.
+This is honest about scale: it reads several °C below the station values in the
+news, because it averages cooler regions, coasts, and high ground.
+
+Alongside it the tool shows a **local peak** (`local_txx`): the per-cell annual
+maximum daily-max on the **0.25° hourly ERA5T** product, over metropolitan
+France. This resolves the afternoon peak and inland cities, so it reads much
+closer to station-scale heat. The **France-peak headline** is the single hottest
+metropolitan-France 0.25° cell for the event.
+
+- **Source / footing.** `local_txx` is fit directly on ERA5T 0.25° hourly, so the
+  event value sits on that same native footing — no reference-product offset (the
+  1.5° pipeline needs one; this one does not). The present climatology uses the
+  1991–2020 period (30 annual maxima).
+- **Future shift — a documented approximation.** CMIP6 change factors are fit at
+  the models' native (coarse, ~1–2.5°) resolution and then interpolated to the
+  0.25° grid before being applied as deltas to the fine present fit. Applying a
+  coarse change factor to a fine present distribution is an approximation: it
+  carries the large-scale warming response, not fine-scale changes in the
+  response itself.
+- **ERA5 vs stations.** Even the 0.25° local peak is a gridbox mean, so it runs
+  roughly **1–2 °C below the hottest individual station** (a known ERA5 cool
+  bias). The displayed local-peak value is honest about being a gridbox figure,
+  not a station record.
+- **Metropolitan France only.** Cells are masked to the Natural Earth France
+  polygon, excluding Spain, Italy, and sea inside the bounding box.
+
 ## Data sources
 
 ```js
