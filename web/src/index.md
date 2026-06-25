@@ -43,12 +43,28 @@ is contextualization, not a formal attribution of this specific event.</div>
 ## How the odds shift along the warming axis
 
 ```js
+// Short axis labels for each level; historical levels (below the present anomaly)
+// are placed before "now" so the axis reads cool → warm.
+const SHORT_LABEL = {
+  "0.0": "1850–1900", "1.0": "~1 °C", "1.5": "+1.5 °C", "2.0": "+2 °C", "3.0": "+3 °C"
+};
+// Clamp return periods so an essentially-never historical point (the event can
+// exceed the distribution's bound in a cooler climate) still fits the axis.
+const RP_CHART_MAX = 400;
+const rpLevels = Object.entries(ev.warmingLevels).map(([g, v]) => ({
+  gwl: +g, label: SHORT_LABEL[g] ?? `+${g}`, rp: v.returnPeriod
+}));
 const rpData = [
-  {level: presentAnom, label: "now", rp: ev.present.returnPeriod, kind: "now"},
-  ...Object.entries(ev.warmingLevels).map(([g, v]) => ({
-    level: +g, label: `+${g}`, rp: v.returnPeriod, kind: "future"
-  }))
-];
+  ...rpLevels.filter((l) => l.gwl < presentAnom),
+  {gwl: presentAnom, label: "now", rp: ev.present.returnPeriod},
+  ...rpLevels.filter((l) => l.gwl >= presentAnom)
+].sort((a, b) => a.gwl - b.gwl).map((l) => ({
+  ...l,
+  y: Math.min(l.rp, RP_CHART_MAX),
+  text: (!isFinite(l.rp) || l.rp > RP_CHART_MAX)
+    ? "never"
+    : `1-in-${l.rp < 10 ? l.rp.toFixed(1) : Math.round(l.rp)}`
+}));
 ```
 
 ```js
@@ -56,14 +72,12 @@ Plot.plot({
   width,
   height: 320,
   marginLeft: 64,
-  x: {label: "Global warming level (°C above 1850-1900)", domain: [1, 3.2], grid: true},
-  y: {type: "log", label: "Return period (years)", grid: true,
-      domain: [1, Math.max(120, ev.present.returnPeriod * 1.2)]},
+  x: {label: "Global warming level (°C above 1850-1900)", domain: [-0.15, 3.2], grid: true},
+  y: {type: "log", label: "Return period (years)", grid: true, domain: [1, RP_CHART_MAX * 1.4]},
   marks: [
-    Plot.line(rpData, {x: "level", y: "rp", stroke: "#b30000", strokeWidth: 2}),
-    Plot.dot(rpData, {x: "level", y: "rp", fill: "#b30000", r: 5}),
-    Plot.text(rpData, {x: "level", y: "rp", text: d => `1-in-${d.rp < 10 ? d.rp.toFixed(1) : Math.round(d.rp)}`,
-      dy: -12, fontWeight: 600}),
+    Plot.line(rpData, {x: "gwl", y: "y", stroke: "#b30000", strokeWidth: 2}),
+    Plot.dot(rpData, {x: "gwl", y: "y", fill: "#b30000", r: 5}),
+    Plot.text(rpData, {x: "gwl", y: "y", text: "text", dy: -12, fontWeight: 600}),
     Plot.ruleX([presentAnom], {stroke: "#888", strokeDasharray: "3,3"})
   ]
 })
@@ -79,16 +93,19 @@ per the return period on the horizontal axis. The dashed line marks the current
 event; where it crosses each curve is its rarity in that climate.
 
 ```js
+const panelLevels = Object.entries(node.warming_levels).map(([g, p]) => ({
+  gwl: +g, label: SHORT_LABEL[g] ?? `+${g} °C`, par: p
+}));
 const panels = [
-  {key: "present", label: "Now", par: node.gev_present},
-  ...Object.entries(node.warming_levels).map(([g, p]) => ({key: g, label: `+${g} °C`, par: p}))
-];
+  ...panelLevels.filter((p) => p.gwl < presentAnom),
+  {gwl: presentAnom, label: "Now", par: node.gev_present},
+  ...panelLevels.filter((p) => p.gwl >= presentAnom)
+].sort((a, b) => a.gwl - b.gwl);
 const periods = d3.range(0, 1).flatMap(() =>
   d3.ticks(Math.log10(1.2), Math.log10(500), 60).map(e => Math.pow(10, e)));
 const curve = panels.flatMap(pl =>
   periods.map(T => ({
     panel: pl.label,
-    order: pl.key === "present" ? 0 : +pl.key,
     T,
     value: returnLevel(T, pl.par.shape, pl.par.loc, pl.par.scale)
   })));

@@ -112,7 +112,7 @@ def _gev_sf(x: float, shape: float, loc: float, scale: float) -> float:
 def _warming_levels(loc_p, scale_p, shape_p, dloc_gwl, dscale_gwl, new_anom):
     """Mirror build_lookup._warming_level_params at the new present anomaly."""
     levels = {}
-    for g in config.WARMING_LEVELS:
+    for g in sorted(set(config.HISTORICAL_LEVELS) | set(config.WARMING_LEVELS)):
         delta = g - new_anom
         scale_g = scale_p + (dscale_gwl or 0.0) * delta
         scale_g = max(scale_g, 0.05)  # guard positivity, matches build_lookup
@@ -165,15 +165,17 @@ def rebase_live(live: dict, lookup: dict, new_anom: float) -> dict:
         m["present"] = {
             "gmst_anom": round(new_anom, 4),
             "exceedance_prob": p_now,
-            "return_period_years": (math.inf if p_now <= 0 else 1.0 / p_now),
+            # null (not Infinity, which is invalid JSON) when the event is beyond
+            # the distribution's bound: essentially never.
+            "return_period_years": (None if p_now <= 0 else 1.0 / p_now),
         }
         levels = {}
         for gwl, par in rnode[mkey]["warming_levels"].items():
             p = _gev_sf(x, par["shape"], par["loc"], par["scale"])
             levels[gwl] = {
                 "exceedance_prob": p,
-                "return_period_years": (math.inf if p <= 0 else 1.0 / p),
-                "probability_ratio_vs_present": (p / p_now if p_now > 0 else math.inf),
+                "return_period_years": (None if p <= 0 else 1.0 / p),
+                "probability_ratio_vs_present": (p / p_now if p_now > 0 else None),
             }
         m["warming_levels"] = levels
     return live

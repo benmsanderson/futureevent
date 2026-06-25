@@ -34,7 +34,7 @@ def _warming_level_params(present_params, cf_metric, present_anom):
     dloc = cf_metric["dloc_dGWL"]
     dscale = cf_metric["dscale_dGWL"]
     levels = {}
-    for g in config.WARMING_LEVELS:
+    for g in sorted(set(config.HISTORICAL_LEVELS) | set(config.WARMING_LEVELS)):
         delta = g - present_anom
         scale_g = scale_p + (dscale or 0.0) * delta
         scale_g = max(scale_g, 0.05)  # guard positivity at low/high levels

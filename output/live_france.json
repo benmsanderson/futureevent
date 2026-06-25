@@ -65,6 +65,16 @@
         "return_period_years": 52.6486835971066
       },
       "warming_levels": {
+        "0.0": {
+          "exceedance_prob": 0.0,
+          "return_period_years": null,
+          "probability_ratio_vs_present": 0.0
+        },
+        "1.0": {
+          "exceedance_prob": 0.003785520157262634,
+          "return_period_years": 264.16448954352285,
+          "probability_ratio_vs_present": 0.19930265301018962
+        },
         "1.5": {
           "exceedance_prob": 0.030728309205587,
           "return_period_years": 32.5432809631511,
@@ -94,6 +104,16 @@
         "return_period_years": 41.17519250796419
       },
       "warming_levels": {
+        "0.0": {
+          "exceedance_prob": 4.3838356872938355e-05,
+          "return_period_years": 22811.073939162743,
+          "probability_ratio_vs_present": 0.001805052783476072
+        },
+        "1.0": {
+          "exceedance_prob": 0.008292087683526406,
+          "return_period_years": 120.59689165934223,
+          "probability_ratio_vs_present": 0.3414283066621186
+        },
         "1.5": {
           "exceedance_prob": 0.034858327522682364,
           "return_period_years": 28.687549606311393,
