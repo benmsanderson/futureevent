@@ -254,9 +254,9 @@ grid
 ## How often — this event in a warmer world
 
 This map holds the event's **temperature** fixed and asks how **often** it
-recurs. A neutral grey scale (kept distinct from the temperature map) shows the
-return period: darker is rarer. As warming rises, today's rare extreme (dark)
-fades toward an ordinary year.
+recurs. A cool scale — grey where the event is common, through cyan to purple
+where it is very rare — keeps it distinct from the temperature map. As warming
+rises, today's rare extreme fades from purple back toward common grey.
 
 ```js
 const freqLevel = grid
@@ -271,12 +271,16 @@ function frequencyMap(grid, borders, metric, level, width) {
   return Plot.plot({
     ...base,
     color: {
-      type: "log", scheme: "Greys", clamp: true,
-      domain: [1, RP_COLOUR_MAX], legend: true,
+      // Common does not vanish into the page: graduate grey (common) → cyan
+      // (rare) → purple (very rare), kept off the hot temperature palette.
+      type: "log", clamp: true,
+      domain: [1, RP_COLOUR_MAX],
+      range: ["#9aa1ab", "#1fb6cf", "#5e2d91"],
+      interpolate: "rgb", legend: true,
       ticks: [1, 3, 10, 30, 100], tickFormat: (n) => `1-in-${n}`,
       label: level === "now"
-        ? "Return period now — darker is rarer"
-        : `Return period at +${level} °C — darker is rarer`
+        ? "Return period now — grey common, purple very rare"
+        : `Return period at +${level} °C — grey common, purple very rare`
     },
     marks: [
       ...base.under,
@@ -308,10 +312,10 @@ grid ? frequencyMap(grid, borders, metric, freqLevel, width) : null
 ```js
 grid
   ? html`<div class="note">${grid.metrics[metric].cells.length} cells on the
-      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. Ordinary
-      cells (a 1-in-1 day now) sit pale; the event's rare footprint shows dark and
-      fades as warming rises. Deep-tail per-cell return periods are clamped at
-      1-in-${RP_CAP}.</div>`
+      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. Common
+      cells sit grey; the event's rare footprint shows cyan-to-purple and fades
+      toward grey as warming rises. Deep-tail per-cell return periods are clamped
+      at 1-in-${RP_CAP}.</div>`
   : null
 ```
 
