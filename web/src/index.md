@@ -119,6 +119,7 @@ larger increase in the odds.
 
 ```js
 const grid = await FileAttachment("data/grid_europe.json").json();
+const borders = await FileAttachment("data/europe_borders.json").json();
 ```
 
 ```js
@@ -128,27 +129,52 @@ const mapGwl = grid
 ```
 
 ```js
-function ratioMap(grid, metric, gwl, width) {
+// Build a closed-ring GeoJSON polygon from a [lonMin, latMin, lonMax, latMax]
+// bbox. The ring must be wound clockwise (in lon/lat with north up) so d3-geo /
+// Plot treats the *rectangle* as the polygon interior; the counter-clockwise
+// winding is read as the complement (whole globe minus the box), which makes the
+// projection fit to the world and shrinks the map to a dot.
+function bboxPolygon([x0, y0, x1, y1]) {
+  return {type: "Polygon", coordinates: [[
+    [x0, y0], [x0, y1], [x1, y1], [x1, y0], [x0, y0]
+  ]]};
+}
+
+function ratioMap(grid, borders, metric, gwl, width) {
   const cells = grid.metrics[metric].cells.filter(d => d.ratio[gwl] != null);
-  const boxes = Object.values(lookup.regions).map(r => ({
-    x1: r.bbox[0], y1: r.bbox[1], x2: r.bbox[2], y2: r.bbox[3], name: r.name
-  }));
   const maxRatio = Math.max(10, d3.quantile(cells, 0.98, d => d.ratio[gwl]) ?? 10);
+  const domain = bboxPolygon(grid.bbox);
+  const regions = Object.values(lookup.regions).map(r => bboxPolygon(r.bbox));
+  // Height from the domain's Mercator aspect ratio so the map fills the frame
+  // (no sea letterboxing) and the geography keeps its true proportions.
+  const [x0, y0, x1, y1] = grid.bbox;
+  const mercY = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+  const aspect = ((x1 - x0) * Math.PI / 180) / (mercY(y1) - mercY(y0));
   return Plot.plot({
     width,
-    height: Math.round(width * 0.62),
-    marginLeft: 44,
-    aspectRatio: 1 / Math.cos((46 * Math.PI) / 180),
-    x: {label: "Longitude", grid: false},
-    y: {label: "Latitude", grid: false},
+    height: Math.round(width / aspect),
+    projection: {type: "mercator", domain},
     color: {
       type: "log", scheme: "YlOrRd", clamp: true,
       domain: [1, maxRatio], legend: true,
       label: `× more likely at +${gwl} °C vs today`
     },
     marks: [
-      Plot.cell(cells, {
-        x: "lon", y: "lat", fill: d => Math.max(1, d.ratio[gwl]), inset: -0.5,
+      // sea, then land, so coastlines read clearly
+      Plot.geo(domain, {fill: "#dce7f0"}),
+      Plot.geo(borders, {fill: "#f4f2ec"}),
+      // smooth the coarse (1.5°) ratio field and clip it to land
+      Plot.raster(cells, {
+        x: "lon", y: "lat", fill: d => Math.max(1, d.ratio[gwl]),
+        interpolate: "barycentric", blur: 3, clip: borders
+      }),
+      // country borders + coastline on top of the field
+      Plot.geo(borders, {stroke: "#8c949e", strokeWidth: 0.5, fill: "none"}),
+      // predefined analysis regions
+      Plot.geo(regions, {stroke: "#1a1a1a", strokeWidth: 1.3, fill: "none"}),
+      // invisible cell centres to retain hover tooltips over the smoothed field
+      Plot.dot(cells, {
+        x: "lon", y: "lat", r: 6, fill: "transparent", stroke: "none",
         tip: true,
         channels: {
           "lon": "lon", "lat": "lat",
@@ -158,8 +184,6 @@ function ratioMap(grid, metric, gwl, width) {
           [`× vs now`]: d => d.ratio[gwl]
         }
       }),
-      Plot.rect(boxes, {x1: "x1", y1: "y1", x2: "x2", y2: "y2",
-        stroke: "#1a1a1a", strokeWidth: 1.2, fill: "none"}),
       Plot.frame({stroke: "#ccc"})
     ]
   });
@@ -168,7 +192,7 @@ function ratioMap(grid, metric, gwl, width) {
 
 ```js
 grid && mapGwl
-  ? ratioMap(grid, metric, mapGwl, width)
+  ? ratioMap(grid, borders, metric, mapGwl, width)
   : html`<div class="note">The spatial probability-ratio map is produced by the
       gridded precompute (<code>output/grid_europe.json</code>). Run
       <code>python -m precompute.grid</code> to enable this panel.</div>`
