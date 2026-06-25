@@ -91,11 +91,3 @@ input[type="number"]:has(+ input[type="range"]) {
   background: var(--hot); color: #fff; border-color: var(--hot);
 }
 .map-tabs input { position: absolute; opacity: 0; pointer-events: none; }
-
-/* Placeholder shown until the maps scroll into view (keeps first paint fast). */
-.map-placeholder {
-  min-height: 420px; display: flex; align-items: center; justify-content: center;
-  color: var(--muted); font-style: italic;
-  background: repeating-linear-gradient(45deg, #f6f5f1, #f6f5f1 10px, #f1f0ec 10px, #f1f0ec 20px);
-  border: 1px solid #e6e4dd; border-radius: 4px;
-}

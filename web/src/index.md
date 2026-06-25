@@ -171,10 +171,9 @@ Plot.plot({
 ```
 
 ```js
-// The heavy map data (≈650 kB) is fetched only once the maps are revealed, so it
-// doesn't compete on the connection with the headline's small data on load.
-const borders = showMaps ? await FileAttachment("data/europe_borders.json").json() : null;
-const grid = showMaps ? await FileAttachment("data/grid_europe.json").json() : null;
+const borders = await FileAttachment("data/europe_borders.json").json();
+// Coarse 1.5° Europe grid — used (experimentally) for the return-period map.
+const grid = await FileAttachment("data/grid_europe.json").json();
 ```
 
 ```js
@@ -285,11 +284,7 @@ function localContourMap(g, borders, width, opts) {
       ...base.under,
       Plot.contour(cells, {
         x: "lon", y: "lat", fill: opts.field,
-        // Sample the contour grid coarsely (the 0.25° data is far coarser than
-        // the screen anyway, and the output is smooth vector paths) — far less
-        // rasterising work, so the map renders quickly when scrolled into view.
-        interpolate: "barycentric", pixelSize: 6,
-        blur: opts.blur ?? 1, thresholds: opts.thresholds,
+        interpolate: "barycentric", blur: opts.blur ?? 2, thresholds: opts.thresholds,
         stroke: opts.iso, strokeWidth: 0.5, strokeOpacity: 0.5, clip: borders
       }),
       ...base.over,
@@ -321,7 +316,7 @@ function localRpMap(g, borders, metric, level, width) {
   return localContourMap(g, borders, width, {
     metricKey: metric,
     bbox: lookup.regions[region].bbox, // clip the coarse Europe grid to France
-    blur: 3, // wider kernel for the coarse 1.5° field (×3 at pixelSize 3 ≈ 9 px)
+    blur: 7, // wider averaging kernel — smooths the coarse 1.5° field
     thresholds: RP_THRESHOLDS, colors: RP_COLORS, iso: "#33333a",
     tickFormat: (d) => `1-in-${d}`,
     label: `How often this heat hits ${level === "now" ? "now" : LEVEL_LABEL[level]} (1-in-N years)`,
@@ -343,7 +338,7 @@ world warms. Slide from the climate before global warming toward a much hotter
 future, and switch between the two views.
 
 ```js
-const gridHires = showMaps ? await FileAttachment("data/grid_france_hires.json").json() : null;
+const gridHires = await FileAttachment("data/grid_france_hires.json").json();
 ```
 
 ```js
@@ -370,38 +365,10 @@ const mapView = view((() => {
 })());
 ```
 
-<div id="maps-sentinel"></div>
-
 ```js
-// Defer the heavy contour maps until the page is idle (so the headline and
-// charts paint first) and then until they scroll near the viewport. The idle
-// wait matters: during load the charts above haven't rendered yet, so the
-// sentinel sits in view — checking only after idle lets the layout settle so the
-// "near viewport" test is meaningful and the rasteriser stays off the load path.
-const showMaps = Generators.observe((notify) => {
-  notify(false);
-  let fired = false;
-  const reveal = () => { if (!fired) { fired = true; notify(true); } };
-  const check = () => {
-    const el = document.querySelector("#maps-sentinel");
-    if (!el) return void requestAnimationFrame(check);
-    if (el.getBoundingClientRect().top < innerHeight + 600) return reveal();
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) { io.disconnect(); reveal(); }
-    }, {rootMargin: "600px 0px"});
-    io.observe(el);
-  };
-  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 700));
-  idle(() => requestAnimationFrame(check), {timeout: 2000});
-});
-```
-
-```js
-showMaps
-  ? (mapView === "How hot it gets"
-      ? localTempMap(gridHires, borders, mapLevel, width)
-      : localRpMap(grid, borders, metric, mapLevel, width))
-  : html`<div class="map-placeholder">The map loads as you scroll here…</div>`
+mapView === "How hot it gets"
+  ? localTempMap(gridHires, borders, mapLevel, width)
+  : localRpMap(grid, borders, metric, mapLevel, width)
 ```
 
 ```js
