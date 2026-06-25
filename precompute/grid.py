@@ -295,7 +295,28 @@ def event_field(ref_lats, ref_lons, era5t_ref_offset: float) -> dict:
 # --------------------------------------------------------------------------
 # Assemble grid JSON
 # --------------------------------------------------------------------------
-def build_grid(models=None, use_cache: bool = True) -> dict:
+def _event_from_grid(path: str, ref_lats, ref_lons):
+    """Reuse a previously computed event field (x_obs) from a grid JSON.
+
+    Lets the GEV fields be recomputed (e.g. for new warming levels) without
+    re-running the ERA5T + ECMWF forecast blend, which keeps the live event value
+    fixed and avoids the GRIB toolchain. Cells are matched to the reference grid
+    by nearest lat/lon; reference cells absent from the source stay NaN.
+    """
+    with open(path) as fh:
+        g = json.load(fh)
+    fields = {}
+    for mkey in config.METRICS:
+        arr = np.full((len(ref_lats), len(ref_lons)), np.nan)
+        for c in g["metrics"][mkey]["cells"]:
+            j = int(np.argmin(np.abs(ref_lats - c["lat"])))
+            i = int(np.argmin(np.abs(ref_lons - c["lon"])))
+            arr[j, i] = c["x_obs"]
+        fields[mkey] = arr
+    return fields, float(g.get("era5t_ref_offset", 0.0))
+
+
+def build_grid(models=None, use_cache: bool = True, reuse_event: str | None = None) -> dict:
     models = models or cmip6.available_models()
     present = era5_present_grid(use_cache=use_cache)
     present_anom = present["present_gmst_anom"]
@@ -303,11 +324,15 @@ def build_grid(models=None, use_cache: bool = True) -> dict:
     ref_lons = np.array(present["lons"])
     cf = cmip6_change_factor_grid(models, ref_lats, ref_lons, use_cache=use_cache)
 
-    from .live_value import era5t_ref_offset as _offset_fn
-    off = _offset_fn(config.PRIMARY_REGION)
-    ev = event_field(ref_lats, ref_lons, off)
+    if reuse_event:
+        ev, off = _event_from_grid(reuse_event, ref_lats, ref_lons)
+    else:
+        from .live_value import era5t_ref_offset as _offset_fn
+        off = _offset_fn(config.PRIMARY_REGION)
+        ev = event_field(ref_lats, ref_lons, off)
 
-    levels = config.WARMING_LEVELS
+    # Historical (cooler) reference levels plus the future warming levels.
+    levels = sorted(set(config.HISTORICAL_LEVELS) | set(config.WARMING_LEVELS))
     out = {
         "schema": "grid/0.1",
         "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -356,8 +381,11 @@ def build_grid(models=None, use_cache: bool = True) -> dict:
                                          if p_now > 0 else None)
                     # The value that keeps the present return period (1/p_now)
                     # under the warmed distribution: an equally rare event, hotter.
-                    rl[f"{g:.1f}"] = (round(return_level(1.0 / p_now, sh, loc_g, scale_g), 2)
-                                      if p_now > 0 else None)
+                    # Degenerate when the event is common now (p_now ~ 1 -> the
+                    # "return level" is the lower tail, -inf); emit null there.
+                    rl_g = (return_level(1.0 / p_now, sh, loc_g, scale_g)
+                            if 0 < p_now < 1 else float("nan"))
+                    rl[f"{g:.1f}"] = round(rl_g, 2) if np.isfinite(rl_g) else None
                 cells.append({
                     "lat": round(float(lat), 3), "lon": round(float(lon), 3),
                     "x_obs": round(x, 2),
@@ -376,13 +404,17 @@ def main():
     ap = argparse.ArgumentParser(description="Build the gridded probability map.")
     ap.add_argument("--max-models", type=int, default=None)
     ap.add_argument("--no-cache", action="store_true")
+    ap.add_argument("--reuse-event", default=None,
+                    help="path to an existing grid JSON whose event field (x_obs) "
+                         "is reused instead of re-running the forecast blend")
     ap.add_argument("--out", default=os.path.join(config.OUTPUT_DIR,
                                                   "grid_europe.json"))
     args = ap.parse_args()
     models = cmip6.available_models()
     if args.max_models:
         models = models[:args.max_models]
-    grid = build_grid(models=models, use_cache=not args.no_cache)
+    grid = build_grid(models=models, use_cache=not args.no_cache,
+                      reuse_event=args.reuse_event)
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w") as fh:
         json.dump(grid, fh)

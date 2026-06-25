@@ -23,6 +23,12 @@ CACHE_DIR = os.environ.get("FE_CACHE_DIR", os.path.join(REPO_DIR, "cache"))
 # Warming-level axis (degrees C relative to 1850-1900)
 # --------------------------------------------------------------------------
 WARMING_LEVELS = [1.5, 2.0, 3.0]
+# Historical / counterfactual global-warming levels (degC vs 1850-1900) shown on
+# the spatial maps as cooler-climate reference points alongside the future
+# WARMING_LEVELS: 0.0 = pre-industrial baseline; 1.0 ~ the mid-2010s. The maps
+# read these to show how hot an equally rare event was, and how much rarer this
+# event was, in cooler past climates.
+HISTORICAL_LEVELS = [0.0, 1.0]
 GWL_BASELINE = "1850-1900"
 
 # --------------------------------------------------------------------------

@@ -135,9 +135,20 @@ function bboxPolygon([x0, y0, x1, y1]) {
 const RP_CAP = 200;
 const RP_COLOUR_MAX = 100;
 const round1 = (x) => Math.round(x * 10) / 10;
+// Slider stops: two cooler historical reference climates, "Now", then the
+// future warming levels. 0.0 = 1850–1900 pre-industrial; 1.0 ≈ the mid-2010s.
 const LEVELS = new Map([
-  ["Now", "now"], ["+1.5 °C", "1.5"], ["+2 °C", "2.0"], ["+3 °C", "3.0"]
+  ["1850–1900", "0.0"], ["Recent (~1 °C)", "1.0"], ["Now", "now"],
+  ["+1.5 °C", "1.5"], ["+2 °C", "2.0"], ["+3 °C", "3.0"]
 ]);
+// Return period for display: null means the event exceeds the distribution's
+// upper bound in that climate (essentially never).
+const fmtRp = (v) => (v == null ? "never" : `1-in-${Math.round(v)}`);
+// Human label for a level in a colour-legend / caption context.
+const LEVEL_LABEL = {
+  "0.0": "in 1850–1900", "1.0": "at ~1 °C (recent past)", "now": "now",
+  "1.5": "at +1.5 °C", "2.0": "at +2 °C", "3.0": "at +3 °C"
+};
 
 // Sea/land basemap, projection and frame shared by both maps.
 function mapBase(grid, borders, width) {
@@ -183,9 +194,10 @@ function tempAtLevel(d, metric, level) {
 ## How hot — an equally rare event in a warmer world
 
 This map holds the event's **rarity** fixed and asks how **hot** it would be.
-*Now* is the temperature the event actually reached; drag **Global warming**
-upward and each cell shows how hot an *equally rare* event becomes as the climate
-warms — the same once-in-a-generation heat, hotter.
+*Now* is the temperature the event actually reached; drag **Global warming** —
+back to the cooler **1850–1900** climate or up toward **+3 °C** — and each cell
+shows how hot an *equally rare* event would be in that climate. The same
+once-in-a-generation heat, cooler in the past and hotter in the future.
 
 ```js
 const heatLevel = grid
@@ -197,8 +209,9 @@ const heatLevel = grid
 function intensityMap(grid, borders, metric, level, width) {
   const base = mapBase(grid, borders, width);
   const cells = grid.metrics[metric].cells;
-  // Fix the colour domain across all levels so the warmer-world shift is visible.
-  const lo = d3.min(cells, (d) => d.x_obs);
+  // Fix the colour domain across the full climate span (coolest pre-industrial
+  // to hottest +3 °C) so the warming shift is visible as the slider moves.
+  const lo = d3.min(cells, (d) => tempAtLevel(d, metric, "0.0"));
   const hi = d3.max(cells, (d) => tempAtLevel(d, metric, "3.0"));
   return Plot.plot({
     ...base,
@@ -206,7 +219,7 @@ function intensityMap(grid, borders, metric, level, width) {
       type: "linear", scheme: "YlOrRd", clamp: true, domain: [lo, hi], legend: true,
       label: level === "now"
         ? "Temperature reached (°C)"
-        : `Temperature of an equally rare event at +${level} °C`
+        : `Temperature of an equally rare event ${LEVEL_LABEL[level]}`
     },
     marks: [
       ...base.under,
@@ -218,8 +231,8 @@ function intensityMap(grid, borders, metric, level, width) {
       Plot.dot(cells, {
         x: "lon", y: "lat", r: 6, fill: "transparent", stroke: "none", tip: true,
         channels: {
-          "lon": "lon", "lat": "lat",
-          "held rarity (1-in)": (d) => Math.round(Math.min(d.present_rp, RP_CAP)),
+          "held rarity": (d) => fmtRp(d.present_rp),
+          "1850–1900 (°C)": (d) => round1(tempAtLevel(d, metric, "0.0")),
           "now (°C)": (d) => round1(d.x_obs),
           "+1.5 (°C)": (d) => round1(tempAtLevel(d, metric, "1.5")),
           "+2 (°C)": (d) => round1(tempAtLevel(d, metric, "2.0")),
@@ -255,8 +268,9 @@ grid
 
 This map holds the event's **temperature** fixed and asks how **often** it
 recurs. A cool scale — grey where the event is common, through cyan to purple
-where it is very rare — keeps it distinct from the temperature map. As warming
-rises, today's rare extreme fades from purple back toward common grey.
+where it is very rare — keeps it distinct from the temperature map. Drag back to
+**1850–1900** to see how exceptional this heat once was (purple), and up toward
+**+3 °C** to watch it fade toward an ordinary grey year.
 
 ```js
 const freqLevel = grid
@@ -280,24 +294,25 @@ function frequencyMap(grid, borders, metric, level, width) {
       ticks: [1, 3, 10, 30, 100], tickFormat: (n) => `1-in-${n}`,
       label: level === "now"
         ? "Return period now — grey common, purple very rare"
-        : `Return period at +${level} °C — grey common, purple very rare`
+        : `Return period ${LEVEL_LABEL[level]} — grey common, purple very rare`
     },
     marks: [
       ...base.under,
+      // null (beyond the GEV bound = essentially never) colours as the rarest.
       Plot.raster(cells, {
-        x: "lon", y: "lat", fill: (d) => rpAtLevel(d, level),
+        x: "lon", y: "lat", fill: (d) => rpAtLevel(d, level) ?? RP_COLOUR_MAX,
         interpolate: "barycentric", blur: 3, clip: borders
       }),
       ...base.over,
       Plot.dot(cells, {
         x: "lon", y: "lat", r: 6, fill: "transparent", stroke: "none", tip: true,
         channels: {
-          "lon": "lon", "lat": "lat",
           "event (°C)": "x_obs",
-          "now (1-in)": (d) => Math.round(Math.min(d.present_rp, RP_CAP)),
-          "+1.5 (1-in)": (d) => Math.round(d.rp["1.5"]),
-          "+2 (1-in)": (d) => Math.round(d.rp["2.0"]),
-          "+3 (1-in)": (d) => Math.round(d.rp["3.0"])
+          "1850–1900": (d) => fmtRp(d.rp["0.0"]),
+          "now": (d) => fmtRp(d.present_rp),
+          "+1.5": (d) => fmtRp(d.rp["1.5"]),
+          "+2": (d) => fmtRp(d.rp["2.0"]),
+          "+3": (d) => fmtRp(d.rp["3.0"])
         }
       })
     ]

@@ -77,28 +77,28 @@ The full live record, with per-day source and provenance, is in
 (`python -m precompute.live_value --region france`); the value moves with each
 new forecast cycle and as ERA5T catches up.
 
-## Spatial probability-ratio map (grid_europe.json)
+## Spatial maps (grid_europe.json)
 
-The map mirrors the point method at every cell of a Europe box (lon -10..25,
+The grid mirrors the point method at every cell of a Europe box (lon -10..25,
 lat 36..56) on the 1.5 deg reference grid: per-cell obs-anchored present GEV from
 ERA5, per-cell CMIP6 ensemble-median change factors (24 models, each sampled to
 the reference cells before fitting), and a per-cell event value from the ERA5T +
-forecast blend. Each cell carries the event value, the present return period, and
-the probability ratio at each warming level.
+forecast blend. The present level is the trend-based +1.36 degC, consistent with
+the point lookup.
 
-For the June 2026 event the high-ratio cells cluster over southern France,
-northern Spain, and northern Italy (the heat dome): the local extreme there
-becomes up to roughly 35x more likely at +2 degC, while most of the domain shows
-a ratio near 1 (the late-June window was an ordinary day away from the dome),
-which is the expected signature of a localized event. Ten of 322 cells have a
-present return period of 5 years or more (the event core).
+Each cell carries, at each global-warming level, the return period of the event
+(`rp`), the probability ratio vs present (`ratio`), and the temperature of an
+*equally rare* event (`rl`, the return level at the present return period). Levels
+span two cooler historical climates (1850-1900 and ~1 degC) and the future
+warming levels (1.5/2/3 degC), which drives two front-end panels: an intensity
+map (how hot an equally rare event is) and a frequency map (how often this event
+recurs). For the June 2026 event the dome over southern France, northern Spain,
+and northern Italy is essentially unprecedented in 1850-1900 (return period beyond
+the fitted bound in the rarest cells) and slides toward near-annual at +3 degC.
 
-Note: the gridded map still reflects the previous flat-decadal-mean present
-baseline (+1.26 degC). Unlike the point lookup, it stores only derived per-cell
-return periods (not the per-cell GEV parameters), so it cannot be re-based in
-place; re-run `python -m precompute.grid` to bring it onto the +1.36 degC
-trend-based present level. The probability ratios shift only modestly (the present
-moves ~0.1 degC closer to +2 degC), but the absolute present return periods do not.
+The GEV fields were recomputed with `python -m precompute.grid --reuse-event`,
+which reuses the committed event field so the rebuild does not re-run the forecast
+blend (the live event value is unchanged) and avoids the GRIB toolchain.
 
 Caveat: per-cell GEV fits are fragile in the tail. A value sitting just below a
 cell's fitted (bounded) upper limit can yield an enormous return period at that
