@@ -17,6 +17,7 @@ import io
 import os
 import urllib.request
 
+import numpy as np
 import pandas as pd
 
 from . import config
@@ -63,12 +64,50 @@ def load_gmst_anomaly() -> pd.Series:
     return s - baseline
 
 
-def present_anomaly(series: pd.Series | None = None) -> float:
-    """Present-day GMST anomaly: mean over the configured recent window."""
+def _complete_years(series: pd.Series) -> pd.Series:
+    """Drop the newest annual value when it is a running, partial year.
+
+    The source series is updated through the year, so its final entry is a
+    year-to-date mean rather than a full calendar year. Including it would bias a
+    trend fit toward whatever part of the year has elapsed, so it is dropped.
+    """
+    s = series.dropna()
+    if config.GMST_PRESENT_DROP_PARTIAL_YEAR and len(s) > 1:
+        s = s.iloc[:-1]
+    return s
+
+
+def present_trend(series: pd.Series | None = None) -> dict:
+    """Trend-based estimate of the present-day GMST anomaly.
+
+    Fits an ordinary-least-squares linear trend to the most recent
+    ``config.GMST_TREND_YEARS`` complete years and evaluates it at the final
+    (most recent complete) year. Following the Indicators of Global Climate
+    Change (Forster et al., 2024), the present level is the *end point of the
+    trend* rather than a flat decadal mean: the latter is centred several years
+    in the past and so lags the present forced warming. Returns the end-point
+    anomaly (degC vs 1850-1900), the current decadal warming rate, and the
+    fitted window.
+    """
     if series is None:
         series = load_gmst_anomaly()
-    w0, w1 = config.GMST_PRESENT_WINDOW
-    return float(series.loc[w0:w1].mean())
+    window = _complete_years(series).tail(config.GMST_TREND_YEARS)
+    years = window.index.to_numpy(dtype=float)
+    vals = window.to_numpy(dtype=float)
+    slope, intercept = np.polyfit(years, vals, 1)
+    year_end = float(years[-1])
+    return {
+        "anomaly": float(intercept + slope * year_end),
+        "rate_per_decade": float(slope * 10.0),
+        "year_start": int(years[0]),
+        "year_end": int(year_end),
+        "n_years": int(len(window)),
+    }
+
+
+def present_anomaly(series: pd.Series | None = None) -> float:
+    """Present-day GMST anomaly (degC vs 1850-1900): the trend end point."""
+    return present_trend(series)["anomaly"]
 
 
 if __name__ == "__main__":
@@ -76,4 +115,7 @@ if __name__ == "__main__":
     print("years", s.index.min(), "to", s.index.max())
     print("1850-1900 mean (should be ~0):", round(s.loc[1850:1900].mean(), 4))
     print("recent:", s.tail(6).round(3).to_dict())
-    print("present anomaly (window mean):", round(present_anomaly(s), 3))
+    pt = present_trend(s)
+    print(f"present anomaly (trend end point, {pt['year_start']}-{pt['year_end']}, "
+          f"{pt['n_years']} yr): {pt['anomaly']:.3f} degC")
+    print(f"current warming rate: {pt['rate_per_decade']:.3f} degC/decade")

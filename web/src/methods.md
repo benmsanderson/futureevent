@@ -16,7 +16,10 @@ this magnitude is now and how rare it becomes at higher global warming levels.
   observed annual block maxima of the event metric, with the observed global-mean
   temperature anomaly (relative to 1850-1900) as a covariate, so the present-day
   distribution accounts for warming to date. The current-climate return period
-  comes from observations, not from model tails.
+  comes from observations, not from model tails. The present-day GMST level is
+  the end point of a linear trend over the most recent 30 complete years, which
+  estimates warming *now* rather than a flat decadal mean (centred several years
+  in the past), following the Indicators of Global Climate Change.
 - **Future panels come from CMIP6 change factors.** The model ensemble is used
   only for the response: the shift in GEV location and scale per degree of
   additional global warming. Those per-degree change factors are applied to the
@@ -33,9 +36,15 @@ html`<table class="prov">
   <tr><th>Future scaling</th><td>${md.datasets.scaling}</td></tr>
   <tr><th>Warming level</th><td>${md.datasets.scaling_gwl_from}</td></tr>
   <tr><th>Observed GMST covariate</th><td>${md.gmst_covariate_source}</td></tr>
-  <tr><th>Present GMST anomaly</th><td>+${md.present_gmst_anom} °C vs ${md.gwl_baseline}</td></tr>
+  <tr><th>Present GMST anomaly</th><td>+${md.present_gmst_anom} °C vs ${md.gwl_baseline}
+    ${md.present_gmst_rate_per_decade ? html` (warming ${md.present_gmst_rate_per_decade} °C/decade)` : ""}</td></tr>
+  ${md.present_gmst_method ? html`<tr><th>Present level method</th><td>${md.present_gmst_method}</td></tr>` : ""}
 </table>`
 ```
+
+${md.present_gmst_citation ? html`<p class="note">Present-day warming is estimated
+as the end point of a trend rather than a flat decadal mean, following the
+Indicators of Global Climate Change: ${md.present_gmst_citation}.</p>` : ""}
 
 ## CMIP6 models used
 
@@ -75,4 +84,7 @@ by the Copernicus licence and ERA5 should be cited per the C3S terms. CMIP6 data
 are made available under the terms of the participating modelling groups; the
 ssp585 and historical experiments and the listed source models should be cited
 per CMIP6 / WCRP terms. ECMWF open data is published under CC-BY-4.0. The
-NOAAGlobalTemp series stands in for HadCRUT5 in this build.
+NOAAGlobalTemp series stands in for HadCRUT5 in this build. The present-day
+warming level follows the Indicators of Global Climate Change (Forster et al.,
+2024, _Earth Syst. Sci. Data_ **16**, 2625–2658,
+[doi:10.5194/essd-16-2625-2024](https://doi.org/10.5194/essd-16-2625-2024)).

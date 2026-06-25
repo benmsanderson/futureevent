@@ -11,7 +11,7 @@
     },
     "gwl_baseline": "1850-1900",
     "gmst_covariate_source": "NOAAGlobalTemp (GCAG) annual global mean, re-referenced to 1850-1900 (stands in for HadCRUT5; Met Office host not reachable in this build)",
-    "present_gmst_anom": 1.2558,
+    "present_gmst_anom": 1.3603,
     "block": "annual maxima",
     "gev_convention": "scipy.stats.genextreme; shape == c == -xi. CDF F(x)=exp(-(1-c*z)^(1/c)), z=(x-loc)/scale; c=0 -> Gumbel. Return period = 1/(1-F).",
     "metrics_defined": {
@@ -19,7 +19,10 @@
       "tx3x": "Hottest 3-day mean of regional-mean daily tasmax (TX3x)"
     },
     "offsets_note": "Reference GEV uses 1.5 deg 6-hourly ERA5 (daily max from 6-hourly sampling biases slightly low); the live event value uses 0.25 deg hourly ERA5T. Apply the documented product offset before evaluating a live value.",
-    "notes": "obs-anchored NS-GEV present; CMIP6 change-factors for future; per-model GWL covariate fit; shape held constant across warming levels."
+    "notes": "obs-anchored NS-GEV present; CMIP6 change-factors for future; per-model GWL covariate fit; shape held constant across warming levels.",
+    "present_gmst_method": "end point of an OLS linear trend over the last 30 complete years (1996-2025); estimates present-day forced warming rather than a flat decadal mean (which lags the present)",
+    "present_gmst_rate_per_decade": 0.236,
+    "present_gmst_citation": "Forster et al. (2024), Indicators of Global Climate Change 2023: annual update of key indicators of the state of the climate system and human influence, Earth Syst. Sci. Data 16, 2625-2658, https://doi.org/10.5194/essd-16-2625-2024"
   },
   "regions": {
     "france": {
@@ -35,12 +38,12 @@
           "name": "Regional-mean daily maximum temperature",
           "units": "degC",
           "gev_present": {
-            "loc": 28.0631,
+            "loc": 28.3673,
             "scale": 1.146,
             "shape": 0.2453,
             "covariate": "GMST",
             "dloc_dGMST": 2.9109,
-            "ref_gmst_anom": 1.2558
+            "ref_gmst_anom": 1.3603
           },
           "fit_diagnostics": {
             "n_years": 63,
@@ -91,18 +94,18 @@
           },
           "warming_levels": {
             "1.5": {
-              "loc": 28.4528,
-              "scale": 1.1473,
+              "loc": 28.5902,
+              "scale": 1.1468,
               "shape": 0.2453
             },
             "2.0": {
-              "loc": 29.2507,
-              "scale": 1.1501,
+              "loc": 29.3881,
+              "scale": 1.1495,
               "shape": 0.2453
             },
             "3.0": {
-              "loc": 30.8464,
-              "scale": 1.1555,
+              "loc": 30.9838,
+              "scale": 1.155,
               "shape": 0.2453
             }
           }
@@ -111,12 +114,12 @@
           "name": "Hottest 3-day mean of regional-mean daily tasmax (TX3x)",
           "units": "degC",
           "gev_present": {
-            "loc": 27.1539,
+            "loc": 27.433,
             "scale": 1.1914,
             "shape": 0.1889,
             "covariate": "GMST",
             "dloc_dGMST": 2.671,
-            "ref_gmst_anom": 1.2558
+            "ref_gmst_anom": 1.3603
           },
           "fit_diagnostics": {
             "n_years": 63,
@@ -167,18 +170,18 @@
           },
           "warming_levels": {
             "1.5": {
-              "loc": 27.5476,
-              "scale": 1.1911,
+              "loc": 27.6582,
+              "scale": 1.1912,
               "shape": 0.1889
             },
             "2.0": {
-              "loc": 28.3537,
-              "scale": 1.1904,
+              "loc": 28.4643,
+              "scale": 1.1905,
               "shape": 0.1889
             },
             "3.0": {
-              "loc": 29.9659,
-              "scale": 1.189,
+              "loc": 30.0765,
+              "scale": 1.1891,
               "shape": 0.1889
             }
           }

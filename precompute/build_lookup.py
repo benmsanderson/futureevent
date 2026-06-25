@@ -51,7 +51,8 @@ def build(region_keys=None, models=None, use_cache=True) -> dict:
     models = models or cmip6.available_models()
 
     gmst_series = gmst.load_gmst_anomaly()
-    present_anom = gmst.present_anomaly(gmst_series)
+    present_trend = gmst.present_trend(gmst_series)
+    present_anom = present_trend["anomaly"]
 
     lookup = {
         "metadata": {
@@ -70,6 +71,14 @@ def build(region_keys=None, models=None, use_cache=True) -> dict:
             "gwl_baseline": config.GWL_BASELINE,
             "gmst_covariate_source": config.GMST_SOURCE_LABEL,
             "present_gmst_anom": round(present_anom, 4),
+            "present_gmst_method": (
+                f"end point of an OLS linear trend over the last "
+                f"{present_trend['n_years']} complete years "
+                f"({present_trend['year_start']}-{present_trend['year_end']}); "
+                f"estimates present-day forced warming rather than a flat decadal "
+                f"mean (which lags the present)"),
+            "present_gmst_rate_per_decade": round(present_trend["rate_per_decade"], 3),
+            "present_gmst_citation": config.GMST_PRESENT_CITATION,
             "block": "annual maxima",
             "gev_convention": "scipy.stats.genextreme; shape == c == -xi. "
                               "CDF F(x)=exp(-(1-c*z)^(1/c)), z=(x-loc)/scale; "

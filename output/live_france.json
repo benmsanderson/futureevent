@@ -60,25 +60,25 @@
       "peak_day": "2026-06-24",
       "peak_source": "20260624 06z",
       "present": {
-        "gmst_anom": 1.2558,
-        "exceedance_prob": 0.008865604850442433,
-        "return_period_years": 112.79546256227465
+        "gmst_anom": 1.3603,
+        "exceedance_prob": 0.01899382722752363,
+        "return_period_years": 52.6486835971066
       },
       "warming_levels": {
         "1.5": {
-          "exceedance_prob": 0.02315266356406547,
-          "return_period_years": 43.19157479366949,
-          "probability_ratio_vs_present": 2.611515396257487
+          "exceedance_prob": 0.030728309205587,
+          "return_period_years": 32.5432809631511,
+          "probability_ratio_vs_present": 1.617805028839008
         },
         "2.0": {
-          "exceedance_prob": 0.09605317145564417,
-          "return_period_years": 10.410900388247818,
-          "probability_ratio_vs_present": 10.83436190491286
+          "exceedance_prob": 0.1163024778073658,
+          "return_period_years": 8.598269089815272,
+          "probability_ratio_vs_present": 6.123172355639514
         },
         "3.0": {
-          "exceedance_prob": 0.4947017669865167,
-          "return_period_years": 2.0214199073747303,
-          "probability_ratio_vs_present": 55.80011463761876
+          "exceedance_prob": 0.5396863998320517,
+          "return_period_years": 1.8529279231627778,
+          "probability_ratio_vs_present": 28.413778506419252
         }
       }
     },
@@ -89,25 +89,25 @@
       "peak_day": "2026-06-26",
       "peak_source": "20260624 06z",
       "present": {
-        "gmst_anom": 1.2558,
-        "exceedance_prob": 0.014894611846072183,
-        "return_period_years": 67.13837260980435
+        "gmst_anom": 1.3603,
+        "exceedance_prob": 0.024286468115639726,
+        "return_period_years": 41.17519250796419
       },
       "warming_levels": {
         "1.5": {
-          "exceedance_prob": 0.029274079037301497,
-          "return_period_years": 34.15991323675065,
-          "probability_ratio_vs_present": 1.9654140262152104
+          "exceedance_prob": 0.034858327522682364,
+          "return_period_years": 28.687549606311393,
+          "probability_ratio_vs_present": 1.4352983462521127
         },
         "2.0": {
-          "exceedance_prob": 0.09152785317057427,
-          "return_period_years": 10.925635916930856,
-          "probability_ratio_vs_present": 6.145031110341478
+          "exceedance_prob": 0.10480209202155855,
+          "return_period_years": 9.541794259167009,
+          "probability_ratio_vs_present": 4.3152463142250514
         },
         "3.0": {
-          "exceedance_prob": 0.4321293429443266,
-          "return_period_years": 2.3141219552147727,
-          "probability_ratio_vs_present": 29.012460842226126
+          "exceedance_prob": 0.46575032023144425,
+          "return_period_years": 2.147073134599397,
+          "probability_ratio_vs_present": 19.177359096175685
         }
       }
     }

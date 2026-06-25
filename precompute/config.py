@@ -77,9 +77,26 @@ GMST_SOURCE_LABEL = (
     "(stands in for HadCRUT5; Met Office host not reachable in this build)"
 )
 GMST_BASELINE = (1850, 1900)
-# Window used to report the "present" GMST anomaly (recent multi-year mean,
-# robust to a single noisy or partial year).
-GMST_PRESENT_WINDOW = (2015, 2024)
+# Present-day GMST anomaly: the end point of a linear trend fitted over the most
+# recent GMST_TREND_YEARS complete years, NOT a flat multi-year mean. A flat
+# decadal mean is centred ~5 years in the past and so understates the present
+# forced level; the trend end point estimates the warming level *now*. This
+# follows the "current warming" framing of the Indicators of Global Climate
+# Change (Forster et al., 2024), which reports present-day warming via a
+# regression that removes interannual variability rather than a single recent
+# year or a flat decadal mean.
+GMST_TREND_YEARS = 30
+# The newest annual value in the source series is a running, year-to-date figure
+# (the series updates through the year), so it is treated as provisional and
+# dropped from the trend fit; the trend end point is reported at the last
+# complete year.
+GMST_PRESENT_DROP_PARTIAL_YEAR = True
+GMST_PRESENT_CITATION = (
+    "Forster et al. (2024), Indicators of Global Climate Change 2023: annual "
+    "update of key indicators of the state of the climate system and human "
+    "influence, Earth Syst. Sci. Data 16, 2625-2658, "
+    "https://doi.org/10.5194/essd-16-2625-2024"
+)
 
 # --------------------------------------------------------------------------
 # Regions (simple lat/lon bounding boxes; bbox = [lon_min, lat_min, lon_max,

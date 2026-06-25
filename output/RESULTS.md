@@ -9,7 +9,10 @@ end-to-end milestone (one region, both metrics).
 - Reference: ARCO-ERA5 1.5 deg 6-hourly conservative, 1959-2021 (63 annual block
   maxima per metric).
 - Observed GMST covariate: NOAAGlobalTemp (GCAG), re-referenced to 1850-1900.
-  Present anomaly (2015-2024 mean): +1.26 degC.
+  Present anomaly: +1.36 degC, taken as the end point of a linear trend over the
+  last 30 complete years (1996-2025; current warming 0.24 degC/decade) rather
+  than a flat decadal mean, following the Indicators of Global Climate Change
+  (Forster et al., 2024, ESSD, doi:10.5194/essd-16-2625-2024).
 - Future scaling: CMIP6 daily tasmax, historical + ssp585, member r1i1p1f1,
   24 models, all succeeded. Per-model GWL from monthly tas (GSAT 20-yr running
   mean vs 1850-1900); change-factor fit capped at year 2100.
@@ -37,15 +40,15 @@ reference footing:
 
 | climate | return period | exceedance prob | vs present |
 | --- | --- | --- | --- |
-| present (GMST +1.26) | 1-in-46 yr | 0.022 | 1.0x |
-| +1.5 degC | 1-in-21 yr | 0.048 | 2.2x |
-| +2.0 degC | 1-in-6 yr | 0.157 | 7.2x |
-| +3.0 degC | 1-in-2 yr | 0.615 | 28x |
+| present (GMST +1.36) | 1-in-25 yr | 0.041 | 1.0x |
+| +1.5 degC | 1-in-17 yr | 0.060 | 1.5x |
+| +2.0 degC | 1-in-5 yr | 0.185 | 4.6x |
+| +3.0 degC | 1-in-2 yr | 0.659 | 16x |
 
-A present-day record-class France heatwave (about 1-in-46 now) becomes roughly
-1-in-6 at +2 degC and near-annual at +3 degC. The magnitudes and the order-of-10
-probability ratios across the warming axis are in line with WWA-style attribution
-framing for major European heatwaves.
+A present-day record-class France heatwave (about 1-in-25 now, on the warmer
+trend-based present baseline) becomes roughly 1-in-5 at +2 degC and near-annual
+at +3 degC. The magnitudes and the probability ratios across the warming axis are
+in line with WWA-style attribution framing for major European heatwaves.
 
 ## Live June 2026 event value (ERA5T + ECMWF forecast blend)
 
@@ -62,12 +65,13 @@ Blended event values on the reference footing, and their rarity:
 
 | metric | peak (degC) | peak day | present | +1.5 | +2.0 | +3.0 |
 | --- | --- | --- | --- | --- | --- | --- |
-| regional_mean_tasmax | 31.3 | 2026-06-24 | 1-in-113 yr | 1-in-43 (2.6x) | 1-in-10 (10.8x) | 1-in-2 (56x) |
-| tx3x | 30.6 | 2026-06-26 | 1-in-67 yr | 1-in-34 (2.0x) | 1-in-11 (6.1x) | 1-in-2 (29x) |
+| regional_mean_tasmax | 31.3 | 2026-06-24 | 1-in-53 yr | 1-in-33 (1.6x) | 1-in-9 (6.1x) | 1-in-2 (28x) |
+| tx3x | 30.6 | 2026-06-26 | 1-in-41 yr | 1-in-29 (1.4x) | 1-in-10 (4.3x) | 1-in-2 (19x) |
 
 The live June 2026 France heatwave is, on the reference footing, a roughly
-1-in-100-year regional-mean daily extreme in the present climate. It becomes
-about 1-in-10 at +2 degC (about 11 times more likely) and near-annual at +3 degC.
+1-in-50-year regional-mean daily extreme in the present climate (on the warmer
+trend-based present baseline). It becomes about 1-in-9 at +2 degC (roughly 6 times
+more likely) and near-annual at +3 degC.
 The full live record, with per-day source and provenance, is in
 `output/live_france.json`. See `precompute/live_value.py` to regenerate it
 (`python -m precompute.live_value --region france`); the value moves with each
@@ -88,6 +92,13 @@ becomes up to roughly 35x more likely at +2 degC, while most of the domain shows
 a ratio near 1 (the late-June window was an ordinary day away from the dome),
 which is the expected signature of a localized event. Ten of 322 cells have a
 present return period of 5 years or more (the event core).
+
+Note: the gridded map still reflects the previous flat-decadal-mean present
+baseline (+1.26 degC). Unlike the point lookup, it stores only derived per-cell
+return periods (not the per-cell GEV parameters), so it cannot be re-based in
+place; re-run `python -m precompute.grid` to bring it onto the +1.36 degC
+trend-based present level. The probability ratios shift only modestly (the present
+moves ~0.1 degC closer to +2 degC), but the absolute present return periods do not.
 
 Caveat: per-cell GEV fits are fragile in the tail. A value sitting just below a
 cell's fitted (bounded) upper limit can yield an enormous return period at that
