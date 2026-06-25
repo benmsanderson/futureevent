@@ -215,6 +215,13 @@ const LEVEL_LABEL = {
 const LEVEL_KEYS = ["0.0", "1.0", "now", "1.5", "2.0", "3.0"];
 const LEVEL_NAMES = ["1850–1900", "Recent ~1 °C", "Now", "+1.5 °C", "+2 °C", "+3 °C"];
 const NOW_INDEX = 2;
+// Plain-language readout for each slider stop: the warming amount (bold) and a
+// one-line, jargon-free description of what that climate is.
+const GWL_DEG = ["0 °C", "+1 °C", `+${round1(lookup.metadata.present_gmst_anom)} °C`,
+  "+1.5 °C", "+2 °C", "+3 °C"];
+const GWL_BLURB = ["before global warming", "the climate of the mid-2010s", "today",
+  "the Paris Agreement's tougher goal", "the Paris Agreement's limit",
+  "where current policies are heading"];
 // Weather-map style discrete bands: filled categories + contour lines.
 const TEMP_THRESHOLDS = [21, 24, 27, 30, 33, 36, 39];
 const TEMP_COLORS = ["#ffffb2", "#fee391", "#fec44f", "#fe9929", "#ec7014",
@@ -222,11 +229,12 @@ const TEMP_COLORS = ["#ffffb2", "#fee391", "#fec44f", "#fe9929", "#ec7014",
 const RP_THRESHOLDS = [2, 5, 10, 30, 100];
 const RP_COLORS = ["#c7ccd1", "#9aa1ab", "#74cddd", "#27a8c4", "#8a63b0", "#5e2d91"];
 
-// Sea/land basemap, projection and frame shared by both maps.
-function mapBase(grid, borders, width) {
-  const domain = bboxPolygon(grid.bbox);
-  const regions = Object.values(lookup.regions).map((r) => bboxPolygon(r.bbox));
-  const [x0, y0, x1, y1] = grid.bbox;
+// Sea/land basemap, projection and frame. `box` (a [lon0,lat0,lon1,lat1] bbox)
+// overrides the framing — used to clip the coarse Europe grid to France.
+function mapBase(grid, borders, width, box) {
+  const bb = box ?? grid.bbox;
+  const domain = bboxPolygon(bb);
+  const [x0, y0, x1, y1] = bb;
   const mercY = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
   const aspect = ((x1 - x0) * Math.PI / 180) / (mercY(y1) - mercY(y0));
   return {
@@ -234,8 +242,7 @@ function mapBase(grid, borders, width) {
     projection: {type: "mercator", domain},
     under: [Plot.geo(domain, {fill: "#dce7f0"}), Plot.geo(borders, {fill: "#f4f2ec"})],
     over: [
-      Plot.geo(borders, {stroke: "#8c949e", strokeWidth: 0.5, fill: "none"}),
-      Plot.geo(regions, {stroke: "#1a1a1a", strokeWidth: 1.3, fill: "none"}),
+      Plot.geo(borders, {stroke: "#8c949e", strokeWidth: 0.6, fill: "none"}),
       Plot.frame({stroke: "#ccc"})
     ]
   };
@@ -269,7 +276,7 @@ function tempAtLevel(d, metric, level) {
 // Weather-map style local-peak field: filled discrete bands plus thin contour
 // lines, from the 0.25° local_txx grid. `field` picks the quantity per cell.
 function localContourMap(g, borders, width, opts) {
-  const base = mapBase(g, borders, width);
+  const base = mapBase(g, borders, width, opts.bbox);
   const cells = g.metrics[opts.metricKey].cells;
   return Plot.plot({
     ...base,
@@ -279,7 +286,7 @@ function localContourMap(g, borders, width, opts) {
       ...base.under,
       Plot.contour(cells, {
         x: "lon", y: "lat", fill: opts.field,
-        interpolate: "barycentric", blur: 2, thresholds: opts.thresholds,
+        interpolate: "barycentric", blur: opts.blur ?? 2, thresholds: opts.thresholds,
         stroke: opts.iso, strokeWidth: 0.5, strokeOpacity: 0.5, clip: borders
       }),
       ...base.over,
@@ -310,9 +317,11 @@ function localTempMap(g, borders, level, width) {
 function localRpMap(g, borders, metric, level, width) {
   return localContourMap(g, borders, width, {
     metricKey: metric,
+    bbox: lookup.regions[region].bbox, // clip the coarse Europe grid to France
+    blur: 7, // wider averaging kernel — smooths the coarse 1.5° field
     thresholds: RP_THRESHOLDS, colors: RP_COLORS, iso: "#33333a",
     tickFormat: (d) => `1-in-${d}`,
-    label: `How often this event recurs ${level === "now" ? "now" : LEVEL_LABEL[level]} (1-in-N yr)`,
+    label: `How often this heat hits ${level === "now" ? "now" : LEVEL_LABEL[level]} (1-in-N years)`,
     field: (d) => rpAtLevel(d, level) ?? RP_CAP,
     channels: {
       "now": (d) => fmtRp(d.present_rp),
@@ -324,22 +333,18 @@ function localRpMap(g, borders, metric, level, width) {
 }
 ```
 
-## The local peak in a warming climate
+## See the heat across France
 
-Two views of the **0.25° local peak** (`local_txx`) over metropolitan France —
-how hot an *equally rare* local peak would be, and how *often* this peak recurs —
-as the climate shifts. Filled bands with contour lines, weather-map style. Slide
-from the pre-industrial **1850–1900** climate up toward **+3 °C**.
+How hot the worst day gets, and how unusual that is — and how both change as the
+world warms. Slide from the climate before global warming toward a much hotter
+future, and switch between the two views.
 
 ```js
 const gridHires = await FileAttachment("data/grid_france_hires.json").json();
 ```
 
 ```js
-const levelIdx = gridHires
-  ? view(Inputs.range([0, 5], {step: 1, value: NOW_INDEX, label: "Global warming",
-      format: (i) => LEVEL_NAMES[Math.round(i)]}))
-  : NOW_INDEX;
+const levelIdx = view(Inputs.range([0, 5], {step: 1, value: NOW_INDEX, label: "Global warming"}));
 ```
 
 ```js
@@ -347,52 +352,35 @@ const mapLevel = LEVEL_KEYS[Math.round(levelIdx)];
 ```
 
 ```js
-html`<div class="note">Showing the <b>${LEVEL_NAMES[Math.round(levelIdx)]}</b> climate.
-  <b>Now</b> is today — about <b>+${round1(lookup.metadata.present_gmst_anom)} °C</b> above
-  1850&ndash;1900 (a 30-year trend through &approx;2025). <b>Recent &sim;1 °C</b> is the
-  climate of the <b>mid-2010s</b> (global warming first reached &sim;1 °C around 2015).
-  +1.5/+2/+3 °C are global-warming levels relative to pre-industrial.</div>`
+html`<div class="gwl-readout">
+  <div class="gwl-deg">${GWL_DEG[Math.round(levelIdx)]}<small> of global warming</small></div>
+  <div class="gwl-sub"><b>${LEVEL_NAMES[Math.round(levelIdx)]}</b> — ${GWL_BLURB[Math.round(levelIdx)]}</div>
+</div>`
 ```
 
-### How hot — the local peak temperature
+```js
+const mapView = view((() => {
+  const r = Inputs.radio(["How hot it gets", "How often it happens"],
+    {value: "How hot it gets"});
+  r.classList.add("map-tabs");
+  return r;
+})());
+```
 
 ```js
-gridHires
+mapView === "How hot it gets"
   ? localTempMap(gridHires, borders, mapLevel, width)
-  : html`<div class="note">The local-peak map comes from the 0.25° precompute
-      (<code>output/grid_france_hires.json</code>). Run
-      <code>python -m precompute.local_peak</code> to enable it.</div>`
+  : localRpMap(grid, borders, metric, mapLevel, width)
 ```
 
 ```js
-gridHires
-  ? html`<div class="note">${gridHires.metrics.local_txx.cells.length} cells on a
-      ${gridHires.grid_deg}° grid over metropolitan France; present climatology
-      ${gridHires.climatology_period.join("&ndash;")}. The hottest cell is
-      ${round1(d3.max(gridHires.metrics.local_txx.cells, (d) => d.x_obs))} °C — a 0.25°
-      gridbox local daily-max from hourly ERA5T, still ~1&ndash;2 °C under the hottest
-      station. Filled bands are 3 °C wide; contour lines mark the band edges.</div>`
-  : null
-```
-
-### How rare — how often this event recurs (coarse grid)
-
-*Experimental: this panel uses the coarse **1.5° Europe** grid (the France-wide
-average metric selected above), not the 0.25° local peak — it shows the dome
-footprint more clearly.*
-
-```js
-grid ? localRpMap(grid, borders, metric, mapLevel, width) : null
-```
-
-```js
-grid
-  ? html`<div class="note">Return period of the ${node.name.toLowerCase()} against
-      each 1.5° cell's own climatology — grey where it is a common value,
-      cyan-to-purple where rare. ${grid.n_models} CMIP6 models. Coarse gridbox
-      footing, so the absolute °C are below station peaks; the rarity is internally
-      consistent.</div>`
-  : null
+mapView === "How hot it gets"
+  ? html`<div class="note">The hottest afternoon, town by town — deep red is the
+      fiercest heat. Slide forward and the same once-in-a-generation day keeps
+      getting hotter.</div>`
+  : html`<div class="note">How rare today's heat is for each area: purple is a
+      once-in-a-lifetime day, grey is an ordinary summer. Slide forward and what is
+      rare today turns into a regular event.</div>`
 ```
 
 ## What the current value is built from

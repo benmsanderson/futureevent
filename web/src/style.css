@@ -71,3 +71,23 @@ table.prov th { color: var(--muted); font-weight: 600; white-space: nowrap; }
 input[type="number"]:has(+ input[type="range"]) {
   display: none;
 }
+
+/* Bold warming-level readout beside the slider. */
+.gwl-readout { margin: 0.3rem 0 0.9rem; }
+.gwl-deg {
+  font-size: 1.7rem; font-weight: 800; color: var(--hot); line-height: 1.1;
+}
+.gwl-deg small { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.gwl-sub { font-size: 0.95rem; color: var(--ink); margin-top: 0.1rem; }
+
+/* Tab-style switch between the two maps (built from Inputs.radio). */
+.map-tabs { margin: 0.4rem 0 0.6rem; display: block !important; }
+.map-tabs label {
+  display: inline-block; padding: 0.4rem 1.05rem; margin: 0 0.4rem 0.3rem 0;
+  border: 1px solid #cfd3da; border-radius: 6px; cursor: pointer;
+  font-weight: 600; color: #555; user-select: none;
+}
+.map-tabs label:has(input:checked) {
+  background: var(--hot); color: #fff; border-color: var(--hot);
+}
+.map-tabs input { position: absolute; opacity: 0; pointer-events: none; }
