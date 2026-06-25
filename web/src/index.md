@@ -171,9 +171,10 @@ Plot.plot({
 ```
 
 ```js
-const borders = await FileAttachment("data/europe_borders.json").json();
-// Coarse 1.5° Europe grid — used (experimentally) for the return-period map.
-const grid = await FileAttachment("data/grid_europe.json").json();
+// The heavy map data (≈650 kB) is fetched only once the maps are revealed, so it
+// doesn't compete on the connection with the headline's small data on load.
+const borders = showMaps ? await FileAttachment("data/europe_borders.json").json() : null;
+const grid = showMaps ? await FileAttachment("data/grid_europe.json").json() : null;
 ```
 
 ```js
@@ -342,7 +343,7 @@ world warms. Slide from the climate before global warming toward a much hotter
 future, and switch between the two views.
 
 ```js
-const gridHires = await FileAttachment("data/grid_france_hires.json").json();
+const gridHires = showMaps ? await FileAttachment("data/grid_france_hires.json").json() : null;
 ```
 
 ```js
@@ -372,24 +373,26 @@ const mapView = view((() => {
 <div id="maps-sentinel"></div>
 
 ```js
-// Defer the heavy contour maps until they scroll near the viewport, so the
-// headline and charts paint immediately instead of waiting on the rasteriser.
+// Defer the heavy contour maps until the page is idle (so the headline and
+// charts paint first) and then until they scroll near the viewport. The idle
+// wait matters: during load the charts above haven't rendered yet, so the
+// sentinel sits in view — checking only after idle lets the layout settle so the
+// "near viewport" test is meaningful and the rasteriser stays off the load path.
 const showMaps = Generators.observe((notify) => {
   notify(false);
   let fired = false;
-  const setup = () => {
+  const reveal = () => { if (!fired) { fired = true; notify(true); } };
+  const check = () => {
     const el = document.querySelector("#maps-sentinel");
-    if (!el) return void requestAnimationFrame(setup);
+    if (!el) return void requestAnimationFrame(check);
+    if (el.getBoundingClientRect().top < innerHeight + 600) return reveal();
     const io = new IntersectionObserver((entries) => {
-      if (!fired && entries.some((e) => e.isIntersecting)) {
-        fired = true;
-        notify(true);
-        io.disconnect();
-      }
-    }, {rootMargin: "500px 0px"});
+      if (entries.some((e) => e.isIntersecting)) { io.disconnect(); reveal(); }
+    }, {rootMargin: "600px 0px"});
     io.observe(el);
   };
-  requestAnimationFrame(setup);
+  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 700));
+  idle(() => requestAnimationFrame(check), {timeout: 2000});
 });
 ```
 
