@@ -28,11 +28,10 @@ const at2 = ev.warmingLevels["2.0"];
 
 ```js
 html`<div class="headline">
-  The current event (<b>${xObs.toFixed(1)} &deg;C</b>, ${node.name.toLowerCase()},
-  peaking ${liveMetric.peak_day}) is
-  <b>${oneInN(ev.present.returnPeriod)}</b> in today's climate
-  (about ${(100 * ev.present.exceedanceProb).toFixed(1)}% per year).
-  At <b>+2 &deg;C</b> of global warming it becomes <b>${oneInN(at2.returnPeriod)}</b>,
+  This heat — a France-wide average of <b>${xObs.toFixed(1)} &deg;C</b>, peaking
+  ${liveMetric.peak_day} — is <b>${oneInN(ev.present.returnPeriod)}</b> in today's
+  climate (about ${(100 * ev.present.exceedanceProb).toFixed(0)}% in any given year).
+  In a <b>+2 &deg;C</b> world it would be <b>${oneInN(at2.returnPeriod)}</b> —
   roughly <b>${at2.ratioVsPresent.toFixed(0)}&times;</b> more likely.
 </div>`
 ```
@@ -65,26 +64,25 @@ if (fp) {
           ? html`, becoming <b>${oneInN(fp2.return_period_years)}</b> at <b>+2 &deg;C</b>` : ""}.
       </div>`
     : html`<div class="headline headline-local">
-        Locally, the hottest gridbox reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
-        — hot, but not a local record (about what that always-warm spot sees in a
-        typical summer). This event's exceptionality is its <b>France-wide extent</b>:
-        the area average above is the rare part, not any single local peak.
+        Locally, the hottest spot reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
+        — hot, but not a record there (about what that always-warm area sees in a
+        normal summer). What made this heatwave stand out is <b>how widespread it
+        was</b> — the countrywide average is the rare part, not any single local peak.
       </div>`);
 }
 ```
 
-<div class="note">This value is a <b>France-wide average</b> of daily maximum
-temperature on a coarse reference footing (1.5°, 6-hourly ERA5) — not a local
-reading. Individual stations peak several °C higher (around 42 °C locally in this
-event); the area average is lower because it includes cooler regions, coasts, and
-high ground. The rarity is computed against a climatology on the <i>same</i>
-footing, so the odds are consistent even though the temperature reads below
-headline station values.</div>
+<div class="note">These figures are a <b>France-wide average</b>, not a single
+town. Local highs run much hotter — around 42 °C somewhere in this heatwave —
+because the average folds in cooler coasts, hills and regions. How rare the heat
+is, though, is measured on a like-for-like basis, so the odds still hold.
+<a href="./methods">How it's measured →</a></div>
 
-<div class="note">This places the event in the context of a warming climate. It
-is contextualization, not a formal attribution of this specific event.</div>
+<div class="note">This puts the heat in the context of a warming world — how
+unusual it is, and how that shifts as warming grows. It is context, not a formal
+attribution study of this exact event.</div>
 
-## How the odds shift along the warming axis
+## How the odds change as the world warms
 
 ```js
 // Short axis labels for each level; historical levels (below the present anomaly)
@@ -127,14 +125,14 @@ Plot.plot({
 })
 ```
 
-Lower on this axis means rarer. The same event sits near the top of the present
-distribution and moves down toward "common" as warming increases.
+Lower means rarer. This heat sits near the top today and slides toward "an
+ordinary year" as the world warms.
 
-## The distribution at each warming level
+## The same heat, climate by climate
 
-Each panel is the return-level curve for that climate: the value you expect once
-per the return period on the horizontal axis. The dashed line marks the current
-event; where it crosses each curve is its rarity in that climate.
+Each panel is a different climate. The curve runs from a common day (left) to a
+rare one (right); the dashed line is this event. The further left it lands, the
+more ordinary this heat has become.
 
 ```js
 const panelLevels = Object.entries(node.warming_levels).map(([g, p]) => ({
