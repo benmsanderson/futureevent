@@ -174,6 +174,8 @@ Plot.plot({
 
 ```js
 const borders = await FileAttachment("data/europe_borders.json").json();
+// Coarse 1.5° Europe grid — used (experimentally) for the return-period map.
+const grid = await FileAttachment("data/grid_europe.json").json();
 ```
 
 ```js
@@ -268,7 +270,7 @@ function tempAtLevel(d, metric, level) {
 // lines, from the 0.25° local_txx grid. `field` picks the quantity per cell.
 function localContourMap(g, borders, width, opts) {
   const base = mapBase(g, borders, width);
-  const cells = g.metrics.local_txx.cells;
+  const cells = g.metrics[opts.metricKey].cells;
   return Plot.plot({
     ...base,
     color: {type: "threshold", domain: opts.thresholds, range: opts.colors,
@@ -289,6 +291,7 @@ function localContourMap(g, borders, width, opts) {
 
 function localTempMap(g, borders, level, width) {
   return localContourMap(g, borders, width, {
+    metricKey: "local_txx",
     thresholds: TEMP_THRESHOLDS, colors: TEMP_COLORS, iso: "#7f2704",
     tickFormat: (d) => `${d}°`,
     label: level === "now"
@@ -304,11 +307,12 @@ function localTempMap(g, borders, level, width) {
   });
 }
 
-function localRpMap(g, borders, level, width) {
+function localRpMap(g, borders, metric, level, width) {
   return localContourMap(g, borders, width, {
+    metricKey: metric,
     thresholds: RP_THRESHOLDS, colors: RP_COLORS, iso: "#33333a",
     tickFormat: (d) => `1-in-${d}`,
-    label: `How often this peak recurs ${level === "now" ? "now" : LEVEL_LABEL[level]} (1-in-N yr)`,
+    label: `How often this event recurs ${level === "now" ? "now" : LEVEL_LABEL[level]} (1-in-N yr)`,
     field: (d) => rpAtLevel(d, level) ?? RP_CAP,
     channels: {
       "now": (d) => fmtRp(d.present_rp),
@@ -371,19 +375,23 @@ gridHires
   : null
 ```
 
-### How rare — how often this local peak recurs
+### How rare — how often this event recurs (coarse grid)
+
+*Experimental: this panel uses the coarse **1.5° Europe** grid (the France-wide
+average metric selected above), not the 0.25° local peak — it shows the dome
+footprint more clearly.*
 
 ```js
-gridHires ? localRpMap(gridHires, borders, mapLevel, width) : null
+grid ? localRpMap(grid, borders, metric, mapLevel, width) : null
 ```
 
 ```js
-gridHires
-  ? html`<div class="note">Return period of each cell's local peak against its own
-      0.25° climatology — grey where it is a common summer value, cyan-to-purple where
-      rare. Future levels apply CMIP6 change factors (${gridHires.n_models} models,
-      coarse-model, interpolated to 0.25°) to the fine present fit, a documented
-      approximation.</div>`
+grid
+  ? html`<div class="note">Return period of the ${node.name.toLowerCase()} against
+      each 1.5° cell's own climatology — grey where it is a common value,
+      cyan-to-purple where rare. ${grid.n_models} CMIP6 models. Coarse gridbox
+      footing, so the absolute °C are below station peaks; the rarity is internally
+      consistent.</div>`
   : null
 ```
 
