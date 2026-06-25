@@ -111,11 +111,14 @@ Plot.plot({
 })
 ```
 
-## Where it gets more likely
+## The event across Europe
 
-The spatial complement: at each cell, how much more likely an event of the local
-intensity becomes at a chosen warming level, relative to today. Redder is a
-larger increase in the odds.
+The same event, in space. Set **Colour by** to *How rare* to see where the heat
+was genuinely exceptional — only the event's footprint (where it stood out
+against the local climate) is shaded — then drag the **Climate** control from
+*Now* toward *+3 °C* to watch a once-rare extreme slide toward routine. Switch to
+*How hot* to see the raw temperatures reached instead. Hover any cell for its
+full trajectory.
 
 ```js
 const grid = await FileAttachment("data/grid_europe.json").json();
@@ -123,8 +126,20 @@ const borders = await FileAttachment("data/europe_borders.json").json();
 ```
 
 ```js
-const mapGwl = grid
-  ? view(Inputs.radio(grid.warming_levels, {value: "2.0", label: "Warming level (°C)"}))
+const mapShow = grid
+  ? view(Inputs.radio(
+      new Map([["How rare (1-in-N)", "rarity"], ["How hot (°C)", "temperature"]]),
+      {value: "rarity", label: "Colour by"}))
+  : null;
+```
+
+```js
+// "Now" plus each warming level. Only affects the rarity view (the temperature
+// reached is the observed event and does not change with the warming axis).
+const mapLevel = grid
+  ? view(Inputs.radio(
+      new Map([["Now", "now"], ["+1.5 °C", "1.5"], ["+2 °C", "2.0"], ["+3 °C", "3.0"]]),
+      {value: "now", label: "Climate"}))
   : null;
 ```
 
@@ -140,9 +155,21 @@ function bboxPolygon([x0, y0, x1, y1]) {
   ]]};
 }
 
-function ratioMap(grid, borders, metric, gwl, width) {
-  const cells = grid.metrics[metric].cells.filter(d => d.ratio[gwl] != null);
-  const maxRatio = Math.max(10, d3.quantile(cells, 0.98, d => d.ratio[gwl]) ?? 10);
+// Per-cell GEV tails can blow up just under a bounded upper limit (a single cell
+// can read 1-in-100000); clamp so colour and tooltips stay sane.
+const RP_CAP = 200;
+// Top of the colour scale: the dome's genuine return periods sit well inside
+// this, and rarer-still cells (incl. tail artefacts) clamp to the darkest red.
+const RP_COLOUR_MAX = 100;
+
+function rpAtLevel(d, level) {
+  const v = level === "now" ? d.present_rp : d.rp[level];
+  return v == null ? null : Math.min(v, RP_CAP);
+}
+
+function eventMap(grid, borders, metric, show, level, width) {
+  const cells = grid.metrics[metric].cells;
+  const rarity = show === "rarity";
   const domain = bboxPolygon(grid.bbox);
   const regions = Object.values(lookup.regions).map(r => bboxPolygon(r.bbox));
   // Height from the domain's Mercator aspect ratio so the map fills the frame
@@ -150,38 +177,56 @@ function ratioMap(grid, borders, metric, gwl, width) {
   const [x0, y0, x1, y1] = grid.bbox;
   const mercY = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
   const aspect = ((x1 - x0) * Math.PI / 180) / (mercY(y1) - mercY(y0));
+
+  // Colour the full smoothed field. In the rarity view, rarer = darker red, so
+  // ordinary cells (1-in-1 now) fall pale on their own and the event footprint
+  // stands out without hard clipping; as warming rises those cells turn common
+  // (pale), so the dark "rare today" zone fades toward ordinary.
+  const fill = rarity ? (d => rpAtLevel(d, level)) : (d => d.x_obs);
+  const levelLabel = level === "now" ? "now" : `at +${level} °C`;
+  const color = rarity
+    ? {
+        type: "log", scheme: "YlOrRd", clamp: true,
+        domain: [1, RP_COLOUR_MAX], legend: true,
+        ticks: [1, 3, 10, 30, 100],
+        tickFormat: (n) => `1-in-${n}`,
+        label: `Return period ${levelLabel} — darker is rarer`
+      }
+    : {
+        type: "linear", scheme: "YlOrRd", clamp: true,
+        domain: d3.extent(cells, (d) => d.x_obs), legend: true,
+        label: "Event temperature reached (°C)"
+      };
+
   return Plot.plot({
     width,
     height: Math.round(width / aspect),
     projection: {type: "mercator", domain},
-    color: {
-      type: "log", scheme: "YlOrRd", clamp: true,
-      domain: [1, maxRatio], legend: true,
-      label: `× more likely at +${gwl} °C vs today`
-    },
+    color,
     marks: [
       // sea, then land, so coastlines read clearly
       Plot.geo(domain, {fill: "#dce7f0"}),
       Plot.geo(borders, {fill: "#f4f2ec"}),
-      // smooth the coarse (1.5°) ratio field and clip it to land
+      // smooth the coarse (1.5°) field and clip it to land
       Plot.raster(cells, {
-        x: "lon", y: "lat", fill: d => Math.max(1, d.ratio[gwl]),
+        x: "lon", y: "lat", fill,
         interpolate: "barycentric", blur: 3, clip: borders
       }),
       // country borders + coastline on top of the field
       Plot.geo(borders, {stroke: "#8c949e", strokeWidth: 0.5, fill: "none"}),
       // predefined analysis regions
       Plot.geo(regions, {stroke: "#1a1a1a", strokeWidth: 1.3, fill: "none"}),
-      // invisible cell centres to retain hover tooltips over the smoothed field
+      // invisible cell centres carry the full per-cell trajectory on hover
       Plot.dot(cells, {
         x: "lon", y: "lat", r: 6, fill: "transparent", stroke: "none",
         tip: true,
         channels: {
           "lon": "lon", "lat": "lat",
-          "event value (°C)": "x_obs",
-          "now (1-in, yr)": "present_rp",
-          [`at +${gwl} (1-in, yr)`]: d => d.rp[gwl],
-          [`× vs now`]: d => d.ratio[gwl]
+          "event (°C)": "x_obs",
+          "rare now (1-in)": (d) => Math.round(Math.min(d.present_rp, RP_CAP)),
+          "at +1.5 (1-in)": (d) => Math.round(d.rp["1.5"]),
+          "at +2 (1-in)": (d) => Math.round(d.rp["2.0"]),
+          "at +3 (1-in)": (d) => Math.round(d.rp["3.0"])
         }
       }),
       Plot.frame({stroke: "#ccc"})
@@ -191,18 +236,20 @@ function ratioMap(grid, borders, metric, gwl, width) {
 ```
 
 ```js
-grid && mapGwl
-  ? ratioMap(grid, borders, metric, mapGwl, width)
-  : html`<div class="note">The spatial probability-ratio map is produced by the
-      gridded precompute (<code>output/grid_europe.json</code>). Run
+grid
+  ? eventMap(grid, borders, metric, mapShow, mapLevel, width)
+  : html`<div class="note">The spatial map is produced by the gridded precompute
+      (<code>output/grid_europe.json</code>). Run
       <code>python -m precompute.grid</code> to enable this panel.</div>`
 ```
 
 ```js
 grid
   ? html`<div class="note">${grid.metrics[metric].cells.length} cells on the
-      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. The boxes
-      outline the predefined regions.</div>`
+      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. In the
+      rarity view, ordinary cells (a 1-in-1 day now) sit pale and the event's
+      rare footprint shows dark; the black boxes outline the predefined regions.
+      Deep-tail per-cell return periods are clamped at 1-in-${RP_CAP}.</div>`
   : null
 ```
 
