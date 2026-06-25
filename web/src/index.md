@@ -10,8 +10,8 @@ const region = "france";
 ```js
 const metric = view(Inputs.radio(
   new Map([
-    ["Hottest day (regional mean)", "regional_mean_tasmax"],
-    ["Hottest 3 days (TX3x)", "tx3x"]
+    ["Hottest day (France-wide average)", "regional_mean_tasmax"],
+    ["Hottest 3-day spell (France-wide average)", "tx3x"]
   ]),
   {value: "regional_mean_tasmax", label: "Metric"}
 ));
@@ -36,6 +36,14 @@ html`<div class="headline">
   roughly <b>${at2.ratioVsPresent.toFixed(0)}&times;</b> more likely.
 </div>`
 ```
+
+<div class="note">This value is a <b>France-wide average</b> of daily maximum
+temperature on a coarse reference footing (1.5°, 6-hourly ERA5) — not a local
+reading. Individual stations peak several °C higher (around 42 °C locally in this
+event); the area average is lower because it includes cooler regions, coasts, and
+high ground. The rarity is computed against a climatology on the <i>same</i>
+footing, so the odds are consistent even though the temperature reads below
+headline station values.</div>
 
 <div class="note">This places the event in the context of a warming climate. It
 is contextualization, not a formal attribution of this specific event.</div>
@@ -272,7 +280,11 @@ grid
 ```js
 grid
   ? html`<div class="note">${grid.metrics[metric].cells.length} cells on the
-      ${grid.grid_deg}° reference grid. ${grid.metrics[metric].cells[0]?.rl
+      ${grid.grid_deg}° reference grid. Each cell is a <b>1.5° gridbox daily-max
+      on the coarse (6-hourly ERA5) footing</b>, so values run several °C below
+      local station peaks — coastal cells also average in cool sea (the hottest
+      cell in the domain is ${round1(d3.max(grid.metrics[metric].cells, (d) => d.x_obs))} °C).
+      ${grid.metrics[metric].cells[0]?.rl
         ? "Equally-rare temperatures are per-cell return levels from the grid."
         : html`The warmer-world shift is approximated from the regional intensity
             response (${round1(intensityScaling(metric))} °C per °C of global
@@ -344,10 +356,12 @@ grid ? frequencyMap(grid, borders, metric, freqLevel, width) : null
 ```js
 grid
   ? html`<div class="note">${grid.metrics[metric].cells.length} cells on the
-      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. Common
-      cells sit grey; the event's rare footprint shows cyan-to-purple and fades
-      toward grey as warming rises. Deep-tail per-cell return periods are clamped
-      at 1-in-${RP_CAP}.</div>`
+      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. Rarity is
+      relative to each cell's own climatology on the coarse 1.5° gridbox footing
+      (the event °C in the tooltip is the gridbox value, below local station
+      peaks). Common cells sit grey; the event's rare footprint shows
+      cyan-to-purple and fades toward grey as warming rises. Deep-tail per-cell
+      return periods are clamped at 1-in-${RP_CAP}.</div>`
   : null
 ```
 
