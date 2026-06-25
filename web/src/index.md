@@ -55,8 +55,10 @@ const fp2 = fp?.warming_levels?.["2.0"] ?? null;
 const fpLoc = fp
   ? (fp.nearest_place ?? `at ${fp.lat.toFixed(2)}°N, ${Math.abs(fp.lon).toFixed(2)}°${fp.lon < 0 ? "W" : "E"}`)
   : "";
-fp
-  ? (fpRp != null && fpRp >= 5
+// This block declares variables, so its trailing expression is NOT
+// auto-displayed — render explicitly with display().
+if (fp) {
+  display(fpRp != null && fpRp >= 5
     ? html`<div class="headline headline-local">
         Locally, the peak reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
         — about <b>${oneInN(fpRp)}</b> in today's climate${fp2 && fp2.return_period_years != null
@@ -67,8 +69,8 @@ fp
         — hot, but not a local record (about what that always-warm spot sees in a
         typical summer). This event's exceptionality is its <b>France-wide extent</b>:
         the area average above is the rare part, not any single local peak.
-      </div>`)
-  : null
+      </div>`);
+}
 ```
 
 <div class="note">This value is a <b>France-wide average</b> of daily maximum
@@ -236,17 +238,21 @@ function rpAtLevel(d, level) {
 // Per-°C location response of the metric's distribution (how much a fixed return
 // level shifts per degree of global warming), from the obs-anchored point fit.
 function intensityScaling(metric) {
-  return lookup.regions[region].metrics[metric].scaling_per_gwl.dloc_dGWL;
+  // Null for metrics that live only in the grid (e.g. local_txx) and have no
+  // point fit in the lookup.
+  const node = lookup.regions[region].metrics[metric];
+  return node ? node.scaling_per_gwl.dloc_dGWL : null;
 }
 
-// Temperature of an *equally rare* event at a warming level. If the gridded
-// precompute supplies per-cell return levels (d.rl), use them; otherwise shift
-// the observed value by the regional intensity scaling (a uniform first-order
-// approximation pending the gridded return-level rebuild).
+// Temperature of an *equally rare* event at a warming level. Prefer the gridded
+// per-cell return level (d.rl); otherwise fall back to the regional intensity
+// scaling. For a degenerate cell (null rl) of a grid-only metric there is no
+// scaling, so leave it unshaded (NaN → transparent in the raster).
 function tempAtLevel(d, metric, level) {
   if (level === "now") return d.x_obs;
   if (d.rl && d.rl[level] != null) return d.rl[level];
-  return d.x_obs + intensityScaling(metric) * (Number(level) - lookup.metadata.present_gmst_anom);
+  const s = intensityScaling(metric);
+  return s == null ? NaN : d.x_obs + s * (Number(level) - lookup.metadata.present_gmst_anom);
 }
 ```
 
