@@ -225,7 +225,10 @@ const TEMP_THRESHOLDS = [21, 24, 27, 30, 33, 36, 39];
 const TEMP_COLORS = ["#ffffb2", "#fee391", "#fec44f", "#fe9929", "#ec7014",
   "#cc4c02", "#a40d0d", "#6d0000"];
 const RP_THRESHOLDS = [2, 5, 10, 30, 100];
-const RP_COLORS = ["#c7ccd1", "#9aa1ab", "#74cddd", "#27a8c4", "#8a63b0", "#5e2d91"];
+// Return-period bins run frequent → rare (short → long return period). Colour
+// runs deep purple (happens all the time) → grey (once-in-a-lifetime), so the
+// striking purple marks where today's heat is already routine.
+const RP_COLORS = ["#5e2d91", "#8a63b0", "#27a8c4", "#74cddd", "#9aa1ab", "#c7ccd1"];
 
 // Sea/land basemap, projection and frame. `box` (a [lon0,lat0,lon1,lat1] bbox)
 // overrides the framing — used to clip the coarse Europe grid to France.
@@ -380,9 +383,9 @@ mapView === "How hot it gets"
   ? html`<div class="note">The hottest afternoon, town by town — deep red is the
       fiercest heat. Slide forward and the same once-in-a-generation day keeps
       getting hotter.</div>`
-  : html`<div class="note">How rare today's heat is for each area: purple is a
-      once-in-a-lifetime day, grey is an ordinary summer. Slide forward and what is
-      rare today turns into a regular event.</div>`
+  : html`<div class="note">How rare today's heat is for each area: deep purple is
+      an ordinary summer's day, grey a once-in-a-lifetime rarity. Slide forward and
+      grey turns to purple — what is rare today becomes a regular event.</div>`
 ```
 
 ## What the current value is built from
