@@ -28,7 +28,7 @@ import pandas as pd
 import xarray as xr
 
 from . import config, blend, cmip6, era5, forecast, gmst, metrics
-from .gev import exceedance_prob, fit_nonstationary
+from .gev import exceedance_prob, fit_nonstationary, return_level
 
 DOMAIN = {"name": "europe", "bbox": [-10.0, 36.0, 25.0, 56.0]}
 MIN_YEARS = 40
@@ -344,6 +344,7 @@ def build_grid(models=None, use_cache: bool = True) -> dict:
                 p_now = exceedance_prob(x, sh, loc_p, scale_p)
                 rp = {}
                 ratio = {}
+                rl = {}  # temperature of an equally rare (present-return-period) event
                 for g in levels:
                     delta = g - present_anom
                     loc_g = loc_p + (dloc_gwl[j, i] if np.isfinite(dloc_gwl[j, i]) else 0.0) * delta
@@ -353,12 +354,16 @@ def build_grid(models=None, use_cache: bool = True) -> dict:
                     rp[f"{g:.1f}"] = None if p_g <= 0 else round(1.0 / p_g, 2)
                     ratio[f"{g:.1f}"] = (round(p_g / p_now, 3)
                                          if p_now > 0 else None)
+                    # The value that keeps the present return period (1/p_now)
+                    # under the warmed distribution: an equally rare event, hotter.
+                    rl[f"{g:.1f}"] = (round(return_level(1.0 / p_now, sh, loc_g, scale_g), 2)
+                                      if p_now > 0 else None)
                 cells.append({
                     "lat": round(float(lat), 3), "lon": round(float(lon), 3),
                     "x_obs": round(x, 2),
                     "present_rp": None if p_now <= 0 else round(1.0 / p_now, 2),
                     "present_p": round(p_now, 5),
-                    "rp": rp, "ratio": ratio,
+                    "rp": rp, "ratio": ratio, "rl": rl,
                 })
         out["metrics"][mkey] = {"name": config.METRICS[mkey]["name"],
                                 "units": config.METRICS[mkey]["units"],

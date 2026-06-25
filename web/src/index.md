@@ -111,44 +111,19 @@ Plot.plot({
 })
 ```
 
-## The event across Europe
-
-The same event, in space. Set **Colour by** to *How rare* to see where the heat
-was genuinely exceptional — only the event's footprint (where it stood out
-against the local climate) is shaded — then drag the **Climate** control from
-*Now* toward *+3 °C* to watch a once-rare extreme slide toward routine. Switch to
-*How hot* to see the raw temperatures reached instead. Hover any cell for its
-full trajectory.
-
 ```js
 const grid = await FileAttachment("data/grid_europe.json").json();
 const borders = await FileAttachment("data/europe_borders.json").json();
 ```
 
 ```js
-const mapShow = grid
-  ? view(Inputs.radio(
-      new Map([["How rare (1-in-N)", "rarity"], ["How hot (°C)", "temperature"]]),
-      {value: "rarity", label: "Colour by"}))
-  : null;
-```
+// Shared map plumbing for both spatial panels.
 
-```js
-// "Now" plus each warming level. Only affects the rarity view (the temperature
-// reached is the observed event and does not change with the warming axis).
-const mapLevel = grid
-  ? view(Inputs.radio(
-      new Map([["Now", "now"], ["+1.5 °C", "1.5"], ["+2 °C", "2.0"], ["+3 °C", "3.0"]]),
-      {value: "now", label: "Climate"}))
-  : null;
-```
-
-```js
 // Build a closed-ring GeoJSON polygon from a [lonMin, latMin, lonMax, latMax]
 // bbox. The ring must be wound clockwise (in lon/lat with north up) so d3-geo /
-// Plot treats the *rectangle* as the polygon interior; the counter-clockwise
-// winding is read as the complement (whole globe minus the box), which makes the
-// projection fit to the world and shrinks the map to a dot.
+// Plot treats the *rectangle* as the polygon interior; counter-clockwise winding
+// is read as the complement (whole globe minus the box), which fits the
+// projection to the world and shrinks the map to a dot.
 function bboxPolygon([x0, y0, x1, y1]) {
   return {type: "Polygon", coordinates: [[
     [x0, y0], [x0, y1], [x1, y1], [x1, y0], [x0, y0]
@@ -158,78 +133,99 @@ function bboxPolygon([x0, y0, x1, y1]) {
 // Per-cell GEV tails can blow up just under a bounded upper limit (a single cell
 // can read 1-in-100000); clamp so colour and tooltips stay sane.
 const RP_CAP = 200;
-// Top of the colour scale: the dome's genuine return periods sit well inside
-// this, and rarer-still cells (incl. tail artefacts) clamp to the darkest red.
 const RP_COLOUR_MAX = 100;
+const round1 = (x) => Math.round(x * 10) / 10;
+const LEVELS = new Map([
+  ["Now", "now"], ["+1.5 °C", "1.5"], ["+2 °C", "2.0"], ["+3 °C", "3.0"]
+]);
+
+// Sea/land basemap, projection and frame shared by both maps.
+function mapBase(grid, borders, width) {
+  const domain = bboxPolygon(grid.bbox);
+  const regions = Object.values(lookup.regions).map((r) => bboxPolygon(r.bbox));
+  const [x0, y0, x1, y1] = grid.bbox;
+  const mercY = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+  const aspect = ((x1 - x0) * Math.PI / 180) / (mercY(y1) - mercY(y0));
+  return {
+    width, height: Math.round(width / aspect),
+    projection: {type: "mercator", domain},
+    under: [Plot.geo(domain, {fill: "#dce7f0"}), Plot.geo(borders, {fill: "#f4f2ec"})],
+    over: [
+      Plot.geo(borders, {stroke: "#8c949e", strokeWidth: 0.5, fill: "none"}),
+      Plot.geo(regions, {stroke: "#1a1a1a", strokeWidth: 1.3, fill: "none"}),
+      Plot.frame({stroke: "#ccc"})
+    ]
+  };
+}
 
 function rpAtLevel(d, level) {
   const v = level === "now" ? d.present_rp : d.rp[level];
   return v == null ? null : Math.min(v, RP_CAP);
 }
 
-function eventMap(grid, borders, metric, show, level, width) {
+// Per-°C location response of the metric's distribution (how much a fixed return
+// level shifts per degree of global warming), from the obs-anchored point fit.
+function intensityScaling(metric) {
+  return lookup.regions[region].metrics[metric].scaling_per_gwl.dloc_dGWL;
+}
+
+// Temperature of an *equally rare* event at a warming level. If the gridded
+// precompute supplies per-cell return levels (d.rl), use them; otherwise shift
+// the observed value by the regional intensity scaling (a uniform first-order
+// approximation pending the gridded return-level rebuild).
+function tempAtLevel(d, metric, level) {
+  if (level === "now") return d.x_obs;
+  if (d.rl && d.rl[level] != null) return d.rl[level];
+  return d.x_obs + intensityScaling(metric) * (Number(level) - lookup.metadata.present_gmst_anom);
+}
+```
+
+## How hot — an equally rare event in a warmer world
+
+This map holds the event's **rarity** fixed and asks how **hot** it would be.
+*Now* is the temperature the event actually reached; drag **Global warming**
+upward and each cell shows how hot an *equally rare* event becomes as the climate
+warms — the same once-in-a-generation heat, hotter.
+
+```js
+const heatLevel = grid
+  ? view(Inputs.radio(LEVELS, {value: "now", label: "Global warming"}))
+  : null;
+```
+
+```js
+function intensityMap(grid, borders, metric, level, width) {
+  const base = mapBase(grid, borders, width);
   const cells = grid.metrics[metric].cells;
-  const rarity = show === "rarity";
-  const domain = bboxPolygon(grid.bbox);
-  const regions = Object.values(lookup.regions).map(r => bboxPolygon(r.bbox));
-  // Height from the domain's Mercator aspect ratio so the map fills the frame
-  // (no sea letterboxing) and the geography keeps its true proportions.
-  const [x0, y0, x1, y1] = grid.bbox;
-  const mercY = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
-  const aspect = ((x1 - x0) * Math.PI / 180) / (mercY(y1) - mercY(y0));
-
-  // Colour the full smoothed field. In the rarity view, rarer = darker red, so
-  // ordinary cells (1-in-1 now) fall pale on their own and the event footprint
-  // stands out without hard clipping; as warming rises those cells turn common
-  // (pale), so the dark "rare today" zone fades toward ordinary.
-  const fill = rarity ? (d => rpAtLevel(d, level)) : (d => d.x_obs);
-  const levelLabel = level === "now" ? "now" : `at +${level} °C`;
-  const color = rarity
-    ? {
-        type: "log", scheme: "YlOrRd", clamp: true,
-        domain: [1, RP_COLOUR_MAX], legend: true,
-        ticks: [1, 3, 10, 30, 100],
-        tickFormat: (n) => `1-in-${n}`,
-        label: `Return period ${levelLabel} — darker is rarer`
-      }
-    : {
-        type: "linear", scheme: "YlOrRd", clamp: true,
-        domain: d3.extent(cells, (d) => d.x_obs), legend: true,
-        label: "Event temperature reached (°C)"
-      };
-
+  // Fix the colour domain across all levels so the warmer-world shift is visible.
+  const lo = d3.min(cells, (d) => d.x_obs);
+  const hi = d3.max(cells, (d) => tempAtLevel(d, metric, "3.0"));
   return Plot.plot({
-    width,
-    height: Math.round(width / aspect),
-    projection: {type: "mercator", domain},
-    color,
+    ...base,
+    color: {
+      type: "linear", scheme: "YlOrRd", clamp: true, domain: [lo, hi], legend: true,
+      label: level === "now"
+        ? "Temperature reached (°C)"
+        : `Temperature of an equally rare event at +${level} °C`
+    },
     marks: [
-      // sea, then land, so coastlines read clearly
-      Plot.geo(domain, {fill: "#dce7f0"}),
-      Plot.geo(borders, {fill: "#f4f2ec"}),
-      // smooth the coarse (1.5°) field and clip it to land
+      ...base.under,
       Plot.raster(cells, {
-        x: "lon", y: "lat", fill,
+        x: "lon", y: "lat", fill: (d) => tempAtLevel(d, metric, level),
         interpolate: "barycentric", blur: 3, clip: borders
       }),
-      // country borders + coastline on top of the field
-      Plot.geo(borders, {stroke: "#8c949e", strokeWidth: 0.5, fill: "none"}),
-      // predefined analysis regions
-      Plot.geo(regions, {stroke: "#1a1a1a", strokeWidth: 1.3, fill: "none"}),
-      // invisible cell centres carry the full per-cell trajectory on hover
+      ...base.over,
       Plot.dot(cells, {
-        x: "lon", y: "lat", r: 6, fill: "transparent", stroke: "none",
-        tip: true,
+        x: "lon", y: "lat", r: 6, fill: "transparent", stroke: "none", tip: true,
         channels: {
           "lon": "lon", "lat": "lat",
-          "event (°C)": "x_obs",
-          "rare now (1-in)": (d) => Math.round(Math.min(d.present_rp, RP_CAP)),
-          "at +1.5 (1-in)": (d) => Math.round(d.rp["1.5"]),
-          "at +2 (1-in)": (d) => Math.round(d.rp["2.0"]),
-          "at +3 (1-in)": (d) => Math.round(d.rp["3.0"])
+          "held rarity (1-in)": (d) => Math.round(Math.min(d.present_rp, RP_CAP)),
+          "now (°C)": (d) => round1(d.x_obs),
+          "+1.5 (°C)": (d) => round1(tempAtLevel(d, metric, "1.5")),
+          "+2 (°C)": (d) => round1(tempAtLevel(d, metric, "2.0")),
+          "+3 (°C)": (d) => round1(tempAtLevel(d, metric, "3.0"))
         }
-      }),
-      Plot.frame({stroke: "#ccc"})
+      })
     ]
   });
 }
@@ -237,19 +233,85 @@ function eventMap(grid, borders, metric, show, level, width) {
 
 ```js
 grid
-  ? eventMap(grid, borders, metric, mapShow, mapLevel, width)
-  : html`<div class="note">The spatial map is produced by the gridded precompute
+  ? intensityMap(grid, borders, metric, heatLevel, width)
+  : html`<div class="note">The spatial maps come from the gridded precompute
       (<code>output/grid_europe.json</code>). Run
-      <code>python -m precompute.grid</code> to enable this panel.</div>`
+      <code>python -m precompute.grid</code> to enable them.</div>`
 ```
 
 ```js
 grid
   ? html`<div class="note">${grid.metrics[metric].cells.length} cells on the
-      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. In the
-      rarity view, ordinary cells (a 1-in-1 day now) sit pale and the event's
-      rare footprint shows dark; the black boxes outline the predefined regions.
-      Deep-tail per-cell return periods are clamped at 1-in-${RP_CAP}.</div>`
+      ${grid.grid_deg}° reference grid. ${grid.metrics[metric].cells[0]?.rl
+        ? "Equally-rare temperatures are per-cell return levels from the grid."
+        : html`The warmer-world shift is approximated from the regional intensity
+            response (${round1(intensityScaling(metric))} °C per °C of global
+            warming, uniform across the map); per-cell return levels would come
+            from the gridded precompute.`}</div>`
+  : null
+```
+
+## How often — this event in a warmer world
+
+This map holds the event's **temperature** fixed and asks how **often** it
+recurs. A neutral grey scale (kept distinct from the temperature map) shows the
+return period: darker is rarer. As warming rises, today's rare extreme (dark)
+fades toward an ordinary year.
+
+```js
+const freqLevel = grid
+  ? view(Inputs.radio(LEVELS, {value: "now", label: "Global warming"}))
+  : null;
+```
+
+```js
+function frequencyMap(grid, borders, metric, level, width) {
+  const base = mapBase(grid, borders, width);
+  const cells = grid.metrics[metric].cells;
+  return Plot.plot({
+    ...base,
+    color: {
+      type: "log", scheme: "Greys", clamp: true,
+      domain: [1, RP_COLOUR_MAX], legend: true,
+      ticks: [1, 3, 10, 30, 100], tickFormat: (n) => `1-in-${n}`,
+      label: level === "now"
+        ? "Return period now — darker is rarer"
+        : `Return period at +${level} °C — darker is rarer`
+    },
+    marks: [
+      ...base.under,
+      Plot.raster(cells, {
+        x: "lon", y: "lat", fill: (d) => rpAtLevel(d, level),
+        interpolate: "barycentric", blur: 3, clip: borders
+      }),
+      ...base.over,
+      Plot.dot(cells, {
+        x: "lon", y: "lat", r: 6, fill: "transparent", stroke: "none", tip: true,
+        channels: {
+          "lon": "lon", "lat": "lat",
+          "event (°C)": "x_obs",
+          "now (1-in)": (d) => Math.round(Math.min(d.present_rp, RP_CAP)),
+          "+1.5 (1-in)": (d) => Math.round(d.rp["1.5"]),
+          "+2 (1-in)": (d) => Math.round(d.rp["2.0"]),
+          "+3 (1-in)": (d) => Math.round(d.rp["3.0"])
+        }
+      })
+    ]
+  });
+}
+```
+
+```js
+grid ? frequencyMap(grid, borders, metric, freqLevel, width) : null
+```
+
+```js
+grid
+  ? html`<div class="note">${grid.metrics[metric].cells.length} cells on the
+      ${grid.grid_deg}° reference grid, ${grid.n_models} CMIP6 models. Ordinary
+      cells (a 1-in-1 day now) sit pale; the event's rare footprint shows dark and
+      fades as warming rises. Deep-tail per-cell return periods are clamped at
+      1-in-${RP_CAP}.</div>`
   : null
 ```
 
