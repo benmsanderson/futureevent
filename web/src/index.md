@@ -285,11 +285,20 @@ function localContourMap(g, borders, width, opts) {
       legend: true, label: opts.label, tickFormat: opts.tickFormat},
     marks: [
       ...base.under,
+      // Base fill. A raster paints every pixel, so a *uniform* field still fills:
+      // at +3 °C every cell is already 1-in-1, and Plot.contour alone draws
+      // nothing when there are no bands to contour (which made the +3 °C map look
+      // blank instead of solidly "happens all the time"). Coarse pixelSize keeps
+      // it cheap.
+      Plot.raster(cells, {
+        x: "lon", y: "lat", fill: opts.field,
+        interpolate: "barycentric", pixelSize: 6, blur: opts.blur ?? 2,
+        clip: borders
+      }),
+      // Smooth weather-style band edges on top; its opaque fill covers the raster
+      // wherever the field actually varies, so banded regions look identical.
       Plot.contour(cells, {
         x: "lon", y: "lat", fill: opts.field,
-        // Coarse rasterising (6 device px/sample) keeps the contour cheap so it
-        // doesn't hog the main thread on load and delay the rest of the page; the
-        // barycentric interpolation + blur still render smooth, weather-style bands.
         interpolate: "barycentric", pixelSize: 6, blur: opts.blur ?? 2,
         thresholds: opts.thresholds,
         stroke: opts.iso, strokeWidth: 0.5, strokeOpacity: 0.5, clip: borders
