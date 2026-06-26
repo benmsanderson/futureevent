@@ -166,3 +166,17 @@ MODEL_FIT_SCALE_COVARIATE = True
 # Cross-check flag: warn if the obs dloc/dGMST and the CMIP median dloc/dGWL
 # disagree by more than this factor (either direction).
 SENSITIVITY_FLAG_RATIO = 2.0
+
+# Ceiling on displayed return periods (years). Beyond this the thin-tail GEV
+# extrapolation is not credible: a broad event reaching normally-cool maritime/
+# northern cells lands far outside their narrow historical range and yields
+# spurious million-year return periods. Values are clamped to this cap, which
+# should read as ">= cap" ("off the chart"), not a precise figure.
+RP_DISPLAY_CAP = 1000.0
+
+
+def cap_rp(years):
+    """Clamp a return period (years) to RP_DISPLAY_CAP; passes None through."""
+    if years is None:
+        return None
+    return min(round(years, 2), RP_DISPLAY_CAP)

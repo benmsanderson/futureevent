@@ -108,8 +108,9 @@ def _print_summary(live: dict):
         print(f"  present (GMST +{p['gmst_anom']}): 1-in-"
               f"{p['return_period_years']:.0f} yr (p={p['exceedance_prob']:.4f})")
         for gwl, v in m["warming_levels"].items():
-            print(f"  +{gwl} degC: 1-in-{v['return_period_years']:.0f} yr, "
-                  f"{v['probability_ratio_vs_present']:.1f}x vs present")
+            r = v["probability_ratio_vs_present"]
+            rtxt = "n/a (impossible now)" if r is None else f"{r:.1f}x vs present"
+            print(f"  +{gwl} degC: 1-in-{v['return_period_years']:.0f} yr, {rtxt}")
 
 
 def main():
@@ -128,7 +129,8 @@ def main():
     out = args.out or os.path.join(config.OUTPUT_DIR, f"live_{args.region}.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as fh:
-        json.dump(live, fh, indent=2)
+        # fail loud on any non-finite that would break JSON.parse in the browser
+        json.dump(live, fh, indent=2, allow_nan=False)
     _print_summary(live)
     print(f"\nwrote {out}")
 

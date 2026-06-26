@@ -183,9 +183,9 @@ def _event_field_local(ref_lats, ref_lons, reuse_event: str | None):
             arr[j, i] = c["x_obs"]
         return arr, g.get("event_peak_day")
     # window=1 (regional_mean_tasmax key) gives the per-cell peak daily max.
-    ev = grid.event_field(np.asarray(ref_lats), np.asarray(ref_lons),
-                          era5t_ref_offset=0.0)
-    return ev["regional_mean_tasmax"], None
+    ev, peak_day = grid.event_field(np.asarray(ref_lats), np.asarray(ref_lons),
+                                    era5t_ref_offset=0.0)
+    return ev["regional_mean_tasmax"], peak_day
 
 
 # --------------------------------------------------------------------------
@@ -232,8 +232,10 @@ def build_local_peak(models=None, use_cache: bool = True,
                 sg = max(sg, 0.05)
                 p_g = exceedance_prob(x, sh, lg, sg)
                 key = f"{gwl:.1f}"
-                rp[key] = None if p_g <= 0 else round(1.0 / p_g, 2)
-                ratio[key] = round(p_g / p_now, 3) if p_now > 0 else None
+                rp[key] = config.cap_rp(None if p_g <= 0 else 1.0 / p_g)
+                _r = (p_g / p_now) if p_now > 0 else None
+                ratio[key] = (round(_r, 3)
+                              if _r is not None and np.isfinite(_r) else None)
                 rl_g = (return_level(1.0 / p_now, sh, lg, sg)
                         if 0 < p_now < 1 else float("nan"))
                 rl[key] = round(rl_g, 2) if np.isfinite(rl_g) else None
@@ -245,7 +247,7 @@ def build_local_peak(models=None, use_cache: bool = True,
             cell = {
                 "lat": round(float(lat), 3), "lon": round(float(lon), 3),
                 "x_obs": round(x, 2),
-                "present_rp": None if p_now <= 0 else round(1.0 / p_now, 2),
+                "present_rp": config.cap_rp(None if p_now <= 0 else 1.0 / p_now),
                 "present_p": round(p_now, 6),
                 "rp": rp, "ratio": ratio, "rl": rl,
             }
@@ -264,7 +266,7 @@ def build_local_peak(models=None, use_cache: bool = True,
         "nearest_place": _nearest_place(plat, plon),
         "peak_day": event_peak_day,
         "present": {
-            "return_period_years": None if p_now <= 0 else round(1.0 / p_now, 2),
+            "return_period_years": config.cap_rp(None if p_now <= 0 else 1.0 / p_now),
             "exceedance_prob": round(p_now, 6),
             "gmst_anom": round(present_anom, 4),
         },

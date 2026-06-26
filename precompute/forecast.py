@@ -49,7 +49,7 @@ OPER_PREFIX = "ifs/0p25/oper/"
 
 
 def _http(url: str, range_header: str | None = None, timeout: int = 90,
-          retries: int = 6) -> bytes:
+          retries: int = 8) -> bytes:
     headers = dict(_UA)
     if range_header:
         headers["Range"] = range_header
@@ -60,16 +60,18 @@ def _http(url: str, range_header: str | None = None, timeout: int = 90,
                 urllib.request.Request(url, headers=headers),
                 timeout=timeout).read()
         except urllib.error.HTTPError as exc:
-            # S3 throttling (503 Slow Down) and transient 5xx: back off and retry
+            # S3 throttling (503 Slow Down) and transient 5xx: back off and retry.
+            # Ceiling is generous so a sustained throttle is ridden out rather
+            # than aborting the whole precompute run.
             if exc.code in (429, 500, 503) and attempt < retries - 1:
                 time.sleep(delay)
-                delay = min(delay * 2, 20.0)
+                delay = min(delay * 2, 60.0)
                 continue
             raise
         except (urllib.error.URLError, TimeoutError):
             if attempt < retries - 1:
                 time.sleep(delay)
-                delay = min(delay * 2, 20.0)
+                delay = min(delay * 2, 60.0)
                 continue
             raise
     raise RuntimeError("unreachable")

@@ -10,13 +10,18 @@ the probability ratio relative to the present.
 from __future__ import annotations
 
 import json
+import math
 
 from scipy.stats import genextreme
+
+from . import config
 
 
 def _eval(x, shape, loc, scale):
     p = float(genextreme.sf(x, shape, loc=loc, scale=scale))
-    return p, (float("inf") if p <= 0 else 1.0 / p)
+    # cap_rp clamps the return period to RP_DISPLAY_CAP and turns the p<=0
+    # "impossible" case into the ceiling rather than a non-JSON-compliant inf.
+    return p, config.cap_rp(float("inf") if p <= 0 else 1.0 / p)
 
 
 def evaluate(lookup: dict, region_key: str, metric_key: str, x_obs: float) -> dict:
@@ -28,7 +33,11 @@ def evaluate(lookup: dict, region_key: str, metric_key: str, x_obs: float) -> di
     levels = {}
     for gwl, params in node["warming_levels"].items():
         p, t = _eval(x_obs, params["shape"], params["loc"], params["scale"])
-        ratio = (p / p_now) if p_now > 0 else float("inf")
+        # null the ratio when present p underflows (event "impossible" now, so the
+        # relative likelihood is undefined / would overflow to inf).
+        ratio = (p / p_now) if p_now > 0 else None
+        if ratio is not None and not math.isfinite(ratio):
+            ratio = None
         levels[gwl] = {
             "exceedance_prob": p,
             "return_period_years": t,
@@ -62,8 +71,8 @@ def format_report(result: dict) -> str:
                  f"1-in-{pr['return_period_years']:.0f} yr "
                  f"(p={pr['exceedance_prob']:.4f})")
     for gwl, v in result["warming_levels"].items():
+        r = v["probability_ratio_vs_present"]
+        rtxt = "n/a (impossible now)" if r is None else f"{r:.1f}x more likely than present"
         lines.append(f"  +{gwl} degC: 1-in-{v['return_period_years']:.0f} yr "
-                     f"(p={v['exceedance_prob']:.4f}), "
-                     f"{v['probability_ratio_vs_present']:.1f}x more likely "
-                     f"than present")
+                     f"(p={v['exceedance_prob']:.4f}), {rtxt}")
     return "\n".join(lines)

@@ -52,26 +52,29 @@ in line with WWA-style attribution framing for major European heatwaves.
 
 ## Live June 2026 event value (ERA5T + ECMWF forecast blend)
 
-At the build date (2026-06-24) ERA5T had ingested France only through 2026-06-17
-(about 5-7 day latency), so the unfolding heatwave is supplied by the ECMWF HRES
-forecast. The blend uses ERA5T for June 4-17, an older long-horizon cycle
-(2026-06-15 12z) to fill June 18-23, and the freshest cycle (2026-06-24 06z) for
-June 24-29. The forecast reads 0.85 degC cooler than ERA5T over the overlap days
-(3-6 hourly vs hourly sampling) and is bias-corrected onto the ERA5T footing; the
-whole series is then shifted by the ERA5T-vs-reference offset (+0.88 degC,
-estimated over June 2021) onto the reference GEV footing.
+Refreshed 2026-06-26: ERA5T had ingested France only through 2026-06-20 (about
+5-7 day latency), so the heatwave peak (June 23-24) is still supplied by the
+ECMWF HRES forecast. The blend uses ERA5T through June 20, an older long-horizon
+cycle (2026-06-18 12z) to fill the gap over the peak, and the freshest cycle
+(2026-06-26 12z) for the tail. The forecast reads 0.62 degC cooler than ERA5T
+over the overlap days and is bias-corrected onto the ERA5T footing; the whole
+series is then shifted by the ERA5T-vs-reference offset (+0.88 degC) onto the
+reference GEV footing. NB the peak is forecast-sourced; the reanalysis refresh
+(centred on 24 June) is pending ERA5T clearing the peak (~early July).
 
 Blended event values on the reference footing, and their rarity:
 
 | metric | peak (degC) | peak day | present | +1.5 | +2.0 | +3.0 |
 | --- | --- | --- | --- | --- | --- | --- |
-| regional_mean_tasmax | 31.3 | 2026-06-24 | 1-in-53 yr | 1-in-33 (1.6x) | 1-in-9 (6.1x) | 1-in-2 (28x) |
-| tx3x | 30.6 | 2026-06-26 | 1-in-41 yr | 1-in-29 (1.4x) | 1-in-10 (4.3x) | 1-in-2 (19x) |
+| regional_mean_tasmax | 31.3 | 2026-06-23 | 1-in-60 yr | 1-in-37 (1.6x) | 1-in-9 (6.5x) | 1-in-2 (31x) |
+| tx3x | 31.2 | 2026-06-24 | 1-in-117 yr | 1-in-75 (1.6x) | 1-in-20 (5.8x) | 1-in-3 (36x) |
 
 The live June 2026 France heatwave is, on the reference footing, a roughly
-1-in-50-year regional-mean daily extreme in the present climate (on the warmer
+1-in-60-year regional-mean daily extreme in the present climate (on the warmer
 trend-based present baseline). It becomes about 1-in-9 at +2 degC (roughly 6 times
-more likely) and near-annual at +3 degC.
+more likely) and near-annual at +3 degC. (Earlier builds understated this: a
+since-fixed bug truncated the event field at ERA5T's last day and dropped the
+forecast tail over the peak; see "Local-peak" below.)
 The full live record, with per-day source and provenance, is in
 `output/live_france.json`. See `precompute/live_value.py` to regenerate it
 (`python -m precompute.live_value --region france`); the value moves with each
@@ -138,37 +141,43 @@ change factor to a fine present fit is a documented approximation (it carries th
 large-scale response, not fine-scale changes in the response).
 
 **France peak for the June 2026 event.** Hottest single metropolitan-France
-0.25 deg cell (owner's chosen definition). Result:
+0.25 deg cell (owner's chosen definition). Result (2026-06-26 refresh, forecast
+peak on 2026-06-23):
 
 | quantity | value |
 | --- | --- |
-| hottest cell | 37.1 degC at 44.0 degN, 0.75 degW (Aquitaine) |
-| present return period | ~1-in-1 yr (exceedance 0.997) |
-| France 0.25 deg peak field | min 17.8 / mean 32.6 / max 37.1 degC |
+| hottest cell | 41.9 degC at 43.75 degN, 1.25 degW (Landes/Aquitaine) |
+| present return period | >= 1-in-1000 yr (capped; see below) |
+| France 0.25 deg peak field | min 18.9 / mean 36.9 / max 41.9 degC |
+| cells over 40 / 38 degC | 80 / 448 of 1034 |
 
-This is a deliberately honest, and somewhat anticlimactic, result. **This event is
-broad but locally moderate**: no France cell exceeded ~37 degC (well below the
-2003/2019 local records of 43-44 degC). Its exceptionality is its **France-wide
-extent** — the whole country hot at once, which is what makes the *area average*
-~1-in-50 — not any local peak. The absolute-hottest cell sits in always-hot
-Aquitaine, where 37 degC is a typical-summer value (hence ~1-in-1 and nearly
-warming-invariant). The "hottest cell" and the "most-unusual cell" have decoupled:
-the locally-rarest cells this event were in the Alps (e.g. ~28 degC, 1-in-13),
-unusual for that cold high ground but low in absolute terms. The forecast's
-3-hourly sampling explains only ~0.3-0.5 degC of the gap (the peak day is
-forecast-sourced), so 37 degC is essentially the real local peak.
+**This revises a prior, understated result.** Earlier builds reported "broad but
+locally moderate, no cell over ~37 degC". That was a bug: `grid.event_field`
+derived ERA5T's last day from the zarr time-axis maximum, which (because the store
+runs to 2050 with NaN placeholders) returned the *window end*, so the forecast
+tail over the June 23-24 peak was dropped and the per-cell max only saw pre-event
+days. With `era5t_last` now taken from the last day carrying real data, the field
+is ~4 degC warmer in the mean and the event reads as **locally severe**:
+Toulouse 39.6 degC (1-in-9, up from 36.3/1-in-1.6), a coherent 41-42 degC cluster
+across Aquitaine/the Landes, below but approaching the 2003/2019 local records
+(43-44 degC). The France-wide *extent* is still notable, but it is no longer the
+only story.
 
-The headline therefore **keeps the hottest-cell value but frames it honestly**:
-the front end leads with "hot, but not a local record; this event's exceptionality
-is its France-wide extent," and only switches to a "1-in-N now -> 1-in-M at +2 degC"
-local-rarity framing for a future event whose hottest cell is genuinely rare
-(present return period >= 5 yr). The per-cell `local_txx` map remains meaningful
-cell-by-cell (each cell's own return level/period), and is shown at 0.25 deg over
-France.
+**Return-period cap.** A broad event reaching normally-cool maritime/northern
+cells lands far outside their narrow historical range, so the per-cell GEV
+extrapolates to spurious return periods (up to ~1-in-1.2M before fixing). Displayed
+return periods are clamped to `config.RP_DISPLAY_CAP` (1-in-1000) and read as
+">= cap" / "off the chart"; the per-cell rarity remains noisy between adjacent
+cells (thin-tail instability), so the absolute-hottest cell can sit on a capped
+RP while a near-equal neighbour reads 1-in-3. The hottest cell is now genuinely
+rare (present RP >= 5), so by the owner's rule the local "1-in-N now -> 1-in-M at
++2 degC" framing applies — but the front-end severity copy in `web/src/index.md`
+should be revisited (it still leads with "broad but moderate"), and the values
+remain forecast-sourced until the reanalysis refresh lands.
 
 All emitted values are finite (`null`, never `Infinity`/`NaN`; written with
-`allow_nan=False`); `live_france.json` and `grid_france_hires.json` both
-strict-parse.
+`allow_nan=False`); `live_france.json`, `grid_europe.json` and
+`grid_france_hires.json` all strict-parse.
 
 ## Reproduce
 

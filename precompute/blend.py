@@ -21,6 +21,7 @@ analyses of the same observations.
 from __future__ import annotations
 
 import datetime as dt
+import os
 import re
 
 import numpy as np
@@ -173,7 +174,16 @@ def _gap_days(era5t_last: dt.date, fc_days) -> list[dt.date]:
 
 
 def config_today() -> dt.date:
-    """Today's date (UTC). Isolated so it can be overridden in tests."""
+    """Today's date (UTC), or a pinned date from ``FE_TODAY`` (YYYY-MM-DD).
+
+    Isolated so it can be overridden in tests and pinned deterministically for a
+    reanalysis re-run: setting ``FE_TODAY`` fixes the 20-day event window and the
+    forecast-cycle selection to a chosen day (e.g. once ERA5T has cleared the
+    event peak), instead of relying on wall-clock "today".
+    """
+    pinned = os.environ.get("FE_TODAY")
+    if pinned:
+        return dt.date.fromisoformat(pinned.strip())
     return dt.datetime.now(dt.timezone.utc).date()
 
 

@@ -261,12 +261,15 @@ def _domain_bias(obs: xr.DataArray, fc: xr.DataArray) -> float:
     return float(np.mean(diffs))
 
 
-def event_field(ref_lats, ref_lons, era5t_ref_offset: float) -> dict:
+def event_field(ref_lats, ref_lons, era5t_ref_offset: float) -> tuple[dict, str]:
     """Per-cell event value (reference footing) for each metric on the ref grid.
 
     The blended 0.25 deg daily field is interpolated to the reference grid cell
-    centres. Returns {metric: (lat, lon) numpy array} index-aligned with
-    ref_lats / ref_lons.
+    centres. Returns ``({metric: (lat, lon) numpy array}, peak_day)`` where the
+    arrays are index-aligned with ref_lats / ref_lons and ``peak_day`` is the
+    ISO date on which the domain-mean daily field peaked (the day the area
+    average was hottest), so callers can record which day the event field came
+    from.
     """
     today = blend.config_today()
     start = (today - dt.timedelta(days=20)).strftime("%Y-%m-%d")
@@ -275,7 +278,26 @@ def event_field(ref_lats, ref_lons, era5t_ref_offset: float) -> dict:
         lambda: xr.open_zarr(config.ERA5T_STORE, chunks={"time": 240},
                              storage_options={"token": "anon"}),
         config.ERA5_TAS_VAR, start, end))
+    la, lo = metrics.lat_name(obs), metrics.lon_name(obs)
+    # The ERA5T zarr time axis runs into the future with NaN placeholders, so the
+    # raw time-max would report the *window end* as the last reanalysis day. ERA5T
+    # fills the whole domain per timestep, so keep only days that actually carry
+    # data; their max is the true last reanalysis day.
+    has_data = obs.notnull().any(dim=[la, lo])
+    obs = obs.isel(time=has_data.values)
     era5t_last = np.datetime64(pd.Timestamp(obs["time"].values.max()).normalize())
+    print(f"[event_field] ERA5T reanalysis last day: "
+          f"{pd.Timestamp(era5t_last).date()}")
+
+    # Guard: when re-running for reanalysis, abort if the event peak is still in
+    # the forecast part of the blend. Set FE_REQUIRE_ERA5T_THROUGH=YYYY-MM-DD
+    # (e.g. the event peak day) to assert reanalysis has cleared it.
+    require = os.environ.get("FE_REQUIRE_ERA5T_THROUGH")
+    if require and era5t_last < np.datetime64(require.strip()):
+        raise RuntimeError(
+            f"ERA5T reanalysis only reaches {pd.Timestamp(era5t_last).date()}, "
+            f"need >= {require.strip()}: the event peak is still forecast-sourced. "
+            "Aborting so a forecast blend is not mistaken for reanalysis.")
 
     cycles = blend.choose_cycles(pd.Timestamp(era5t_last).date())
     fc = xr.concat([_to_180(_forecast_field(d, c)) for d, c in cycles], dim="time")
@@ -283,12 +305,16 @@ def event_field(ref_lats, ref_lons, era5t_ref_offset: float) -> dict:
     fc = fc - _domain_bias(obs, fc)  # onto the ERA5T footing
 
     # the reference grid is already in the -180..180 frame
-    la, lo = metrics.lat_name(obs), metrics.lon_name(obs)
     obs_r = obs.interp({la: ref_lats, lo: ref_lons})
     fc_r = fc.interp({la: ref_lats, lo: ref_lons})
     fc_future = fc_r.sel(time=fc_r["time"] > era5t_last)
     blended = xr.concat([obs_r, fc_future], dim="time").sortby("time")
     blended = blended.groupby("time").first()  # dedupe overlap, keep ERA5T
+
+    # domain-mean argmax: the day the area-average daily field peaked
+    domain_mean = blended.mean(dim=[la, lo])
+    peak_idx = int(domain_mean.argmax("time"))
+    peak_day = str(pd.Timestamp(domain_mean["time"].values[peak_idx]).date())
 
     out = {}
     for mkey, mcfg in config.METRICS.items():
@@ -298,7 +324,7 @@ def event_field(ref_lats, ref_lons, era5t_ref_offset: float) -> dict:
                                      min_periods=mcfg["window_days"]).mean()
         peak = series.max("time") - era5t_ref_offset  # reference footing
         out[mkey] = peak.transpose(la, lo).values
-    return out
+    return out, peak_day
 
 
 # --------------------------------------------------------------------------
@@ -333,12 +359,13 @@ def build_grid(models=None, use_cache: bool = True, reuse_event: str | None = No
     ref_lons = np.array(present["lons"])
     cf = cmip6_change_factor_grid(models, ref_lats, ref_lons, use_cache=use_cache)
 
+    event_peak_day = None
     if reuse_event:
         ev, off = _event_from_grid(reuse_event, ref_lats, ref_lons)
     else:
         from .live_value import era5t_ref_offset as _offset_fn
         off = _offset_fn(config.PRIMARY_REGION)
-        ev = event_field(ref_lats, ref_lons, off)
+        ev, event_peak_day = event_field(ref_lats, ref_lons, off)
 
     # Historical (cooler) reference levels plus the future warming levels.
     levels = sorted(set(config.HISTORICAL_LEVELS) | set(config.WARMING_LEVELS))
@@ -352,6 +379,7 @@ def build_grid(models=None, use_cache: bool = True, reuse_event: str | None = No
         "warming_levels": [f"{g:.1f}" for g in levels],
         "n_models": len(cf["models"]),
         "era5t_ref_offset": round(off, 3),
+        "event_peak_day": event_peak_day,
         "metrics": {},
     }
 
@@ -385,9 +413,11 @@ def build_grid(models=None, use_cache: bool = True, reuse_event: str | None = No
                     scale_g = scale_p + (dscale_gwl[j, i] if np.isfinite(dscale_gwl[j, i]) else 0.0) * delta
                     scale_g = max(scale_g, 0.05)
                     p_g = exceedance_prob(x, sh, loc_g, scale_g)
-                    rp[f"{g:.1f}"] = None if p_g <= 0 else round(1.0 / p_g, 2)
-                    ratio[f"{g:.1f}"] = (round(p_g / p_now, 3)
-                                         if p_now > 0 else None)
+                    rp[f"{g:.1f}"] = config.cap_rp(None if p_g <= 0 else 1.0 / p_g)
+                    _r = (p_g / p_now) if p_now > 0 else None
+                    ratio[f"{g:.1f}"] = (round(_r, 3)
+                                         if _r is not None and np.isfinite(_r)
+                                         else None)
                     # The value that keeps the present return period (1/p_now)
                     # under the warmed distribution: an equally rare event, hotter.
                     # Degenerate when the event is common now (p_now ~ 1 -> the
@@ -398,7 +428,7 @@ def build_grid(models=None, use_cache: bool = True, reuse_event: str | None = No
                 cells.append({
                     "lat": round(float(lat), 3), "lon": round(float(lon), 3),
                     "x_obs": round(x, 2),
-                    "present_rp": None if p_now <= 0 else round(1.0 / p_now, 2),
+                    "present_rp": config.cap_rp(None if p_now <= 0 else 1.0 / p_now),
                     "present_p": round(p_now, 5),
                     "rp": rp, "ratio": ratio, "rl": rl,
                 })
