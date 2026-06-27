@@ -64,8 +64,16 @@ export function evaluate(lookup, region, metric, xObs) {
   };
 }
 
-// Human phrasing helpers for the headline.
-export function oneInN(period) {
+// Human phrasing helpers for the headline. `lang` is "en" (default) or "fr".
+export function oneInN(period, lang = "en") {
+  if (lang === "fr") {
+    if (!isFinite(period)) return "quasiment jamais";
+    if (period >= 100) return `environ 1 sur ${Math.round(period / 10) * 10}`;
+    if (period >= 20) return `environ 1 sur ${Math.round(period / 5) * 5}`;
+    if (period >= 3) return `environ 1 sur ${Math.round(period)}`;
+    if (period > 1.2) return `environ 1 sur ${period.toFixed(1).replace(".", ",")}`;
+    return "presque chaque année";
+  }
   if (!isFinite(period)) return "essentially never";
   if (period >= 100) return `about 1-in-${Math.round(period / 10) * 10}`;
   if (period >= 20) return `about 1-in-${Math.round(period / 5) * 5}`;

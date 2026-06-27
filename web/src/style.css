@@ -92,6 +92,24 @@ input[type="number"]:has(+ input[type="range"]) {
 }
 .map-tabs input { position: absolute; opacity: 0; pointer-events: none; }
 
+/* Language toggle, fixed at the top-right of the viewport (English default). */
+.lang-toggle {
+  position: fixed; top: 0.6rem; right: 0.8rem; z-index: 1000;
+  display: flex !important; gap: 0; background: #fff;
+  border: 1px solid #cfd3da; border-radius: 6px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.lang-toggle label {
+  margin: 0; padding: 0.25rem 0.6rem; cursor: pointer; font-size: 0.85rem;
+  font-weight: 600; color: #555; user-select: none;
+}
+.lang-toggle label:has(input:checked) { background: var(--hot); color: #fff; }
+.lang-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+
+/* md() wraps rendered text in <p>; drop its default margins inside our callouts. */
+.headline > p, .headline-local > p, .map-guide > p,
+.note > p, .provenance > p { margin: 0; }
+
 /* Read-this-first guidance shown directly above the map (not the muted footnote
    .note, which users miss below the figure). A light callout with a hot accent. */
 .map-guide {

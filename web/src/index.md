@@ -1,20 +1,38 @@
-# France: June 2026 heat in a warming climate
+---
+title: France · June 2026 heat in a warming climate
+---
 
 ```js
 import {evaluate, oneInN, returnLevel} from "./components/gev.js";
+import {STR, locPhrase} from "./components/i18n.js";
 const lookup = await FileAttachment("data/lookup.json").json();
 const live = await FileAttachment("data/live_france.json").json();
 const region = "france";
 ```
 
 ```js
-const metric = view(Inputs.radio(
-  new Map([
-    ["Hottest day (France-wide average)", "regional_mean_tasmax"],
-    ["Hottest 3-day spell (France-wide average)", "tx3x"]
-  ]),
-  {value: "regional_mean_tasmax", label: "Metric"}
-));
+// Language toggle (English default), persisted across reloads. `lang` is "en"|"fr".
+const langInput = Inputs.radio(new Map([["English", "en"], ["Français", "fr"]]), {
+  value: (typeof localStorage !== "undefined" && localStorage.getItem("fe-lang")) || "en"
+});
+langInput.classList.add("lang-toggle");
+langInput.addEventListener("input", () => {
+  try { localStorage.setItem("fe-lang", langInput.value); } catch (e) {}
+});
+const lang = view(langInput);
+```
+
+```js
+const T = STR[lang];
+```
+
+```js
+display(md`# ${T.title}`)
+```
+
+```js
+const metric = view(Inputs.radio(T.metricOptions,
+  {value: "regional_mean_tasmax", label: T.metricLabel}));
 ```
 
 ```js
@@ -27,13 +45,14 @@ const at2 = ev.warmingLevels["2.0"];
 ```
 
 ```js
-html`<div class="headline">
-  This heat — a France-wide average of <b>${xObs.toFixed(1)} &deg;C</b>, peaking
-  ${liveMetric.peak_day} — is <b>${oneInN(ev.present.returnPeriod)}</b> in today's
-  climate (about ${(100 * ev.present.exceedanceProb).toFixed(0)}% in any given year).
-  In a <b>+2 &deg;C</b> world it would be <b>${oneInN(at2.returnPeriod)}</b> —
-  roughly <b>${at2.ratioVsPresent.toFixed(0)}&times;</b> more likely.
-</div>`
+display(html`<div class="headline">${md`${T.headline({
+  xObs: xObs.toFixed(1),
+  day: liveMetric.peak_day,
+  rpNow: oneInN(ev.present.returnPeriod, lang),
+  pct: (100 * ev.present.exceedanceProb).toFixed(0),
+  rp2: oneInN(at2.returnPeriod, lang),
+  ratio: at2.ratioVsPresent.toFixed(0)
+})}`}</div>`)
 ```
 
 ```js
@@ -50,64 +69,45 @@ html`<div class="headline">
 //      the +2 °C number is capped too, so the now→+2 comparison is meaningless.
 //      We say "off the charts" and drop the comparison rather than print
 //      "1-in-1000 becoming 1-in-1000", which reads as nonsense.
-const RP_CAP = 1000; // matches precompute config.RP_DISPLAY_CAP
+const RP_DISPLAY_CAP = 1000; // matches precompute config.RP_DISPLAY_CAP
 const fp = live.france_peak ?? null;
 const fpRp = fp?.present?.return_period_years ?? null;
 const fp2 = fp?.warming_levels?.["2.0"] ?? null;
 const fp2Rp = fp2?.return_period_years ?? null;
-const fpLoc = fp
-  ? (fp.nearest_place ?? `at ${fp.lat.toFixed(2)}°N, ${Math.abs(fp.lon).toFixed(2)}°${fp.lon < 0 ? "W" : "E"}`)
-  : "";
-// oneInN() already includes the word "about", so do not prepend it again.
-// This block declares variables, so its trailing expression is NOT
-// auto-displayed — render explicitly with display().
+const fpLoc = locPhrase(fp, lang);
+// Render a markdown string inside the styled local-headline box.
+const localBox = (s) => display(html`<div class="headline headline-local">${md`${s}`}</div>`);
 if (fp) {
-  if (fpRp != null && fpRp >= RP_CAP) {
+  const value = fp.value.toFixed(1);
+  if (fpRp != null && fpRp >= RP_DISPLAY_CAP) {
     // regime 3: off the charts
-    display(html`<div class="headline headline-local">
-        Locally, the peak reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
-        — so far above what that spot normally sees that it is <b>off the charts</b>
-        (rarer than 1-in-${RP_CAP} even in today's climate).
-      </div>`);
+    localBox(T.localOffCharts({value, loc: fpLoc, cap: RP_DISPLAY_CAP}));
   } else if (fpRp != null && fpRp >= 5) {
     // regime 2: genuinely rare and on-scale. Only show the +2 °C shift when it is
     // a meaningful, non-capped, lower value (warming makes the event more common).
-    const showShift = fp2Rp != null && fp2Rp < fpRp && fp2Rp < RP_CAP;
-    display(html`<div class="headline headline-local">
-        Locally, the peak reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
-        — <b>${oneInN(fpRp)}</b> in today's climate${showShift
-          ? html`, becoming <b>${oneInN(fp2Rp)}</b> at <b>+2 &deg;C</b>` : ""}.
-      </div>`);
+    const showShift = fp2Rp != null && fp2Rp < fpRp && fp2Rp < RP_DISPLAY_CAP;
+    localBox(T.localRare({value, loc: fpLoc,
+      rpText: oneInN(fpRp, lang), rp2Text: oneInN(fp2Rp, lang), showShift}));
   } else {
     // regime 1: always-hot cell — extent is the story
-    display(html`<div class="headline headline-local">
-        Locally, the hottest spot reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
-        — hot, but not a record there (about what that always-warm area sees in a
-        normal summer). What made this heatwave stand out is <b>how widespread it
-        was</b> — the countrywide average is the rare part, not any single local peak.
-      </div>`);
+    localBox(T.localExtent({value, loc: fpLoc}));
   }
 }
 ```
 
-<div class="note">These figures are a <b>France-wide average</b>, not a single
-town. Local highs run much hotter — around 42 °C somewhere in this heatwave —
-because the average folds in cooler coasts, hills and regions. How rare the heat
-is, though, is measured on a like-for-like basis, so the odds still hold.
-<a href="./methods">How it's measured →</a></div>
+```js
+display(html`<div class="note">${md`${T.note1}`}</div>`);
+display(html`<div class="note">${md`${T.note2}`}</div>`);
+```
 
-<div class="note">This puts the heat in the context of a warming world — how
-unusual it is, and how that shifts as warming grows. It is context, not a formal
-attribution study of this exact event.</div>
-
-## How the odds change as the world warms
+```js
+display(md`## ${T.headingOdds}`)
+```
 
 ```js
 // Short axis labels for each level; historical levels (below the present anomaly)
 // are placed before "now" so the axis reads cool → warm.
-const SHORT_LABEL = {
-  "0.0": "1850–1900", "1.0": "~1 °C", "1.5": "+1.5 °C", "2.0": "+2 °C", "3.0": "+3 °C"
-};
+const SHORT_LABEL = T.shortLabel;
 // Clamp return periods so an essentially-never historical point (the event can
 // exceed the distribution's bound in a cooler climate) still fits the axis.
 const RP_CHART_MAX = 400;
@@ -116,14 +116,14 @@ const rpLevels = Object.entries(ev.warmingLevels).map(([g, v]) => ({
 }));
 const rpData = [
   ...rpLevels.filter((l) => l.gwl < presentAnom),
-  {gwl: presentAnom, label: "now", rp: ev.present.returnPeriod},
+  {gwl: presentAnom, label: T.now, rp: ev.present.returnPeriod},
   ...rpLevels.filter((l) => l.gwl >= presentAnom)
 ].sort((a, b) => a.gwl - b.gwl).map((l) => ({
   ...l,
   y: Math.min(l.rp, RP_CHART_MAX),
   text: (!isFinite(l.rp) || l.rp > RP_CHART_MAX)
-    ? "never"
-    : `1-in-${l.rp < 10 ? l.rp.toFixed(1) : Math.round(l.rp)}`
+    ? T.fmtRp(null)
+    : T.tickOneIn(l.rp < 10 ? l.rp.toFixed(1) : Math.round(l.rp))
 }));
 ```
 
@@ -132,8 +132,8 @@ Plot.plot({
   width,
   height: 320,
   marginLeft: 64,
-  x: {label: "Global warming level (°C above 1850-1900)", domain: [-0.15, 3.2], grid: true},
-  y: {type: "log", label: "Return period (years)", grid: true, domain: [1, RP_CHART_MAX * 1.4]},
+  x: {label: T.axisWarming, domain: [-0.15, 3.2], grid: true},
+  y: {type: "log", label: T.axisReturnPeriod, grid: true, domain: [1, RP_CHART_MAX * 1.4]},
   marks: [
     Plot.line(rpData, {x: "gwl", y: "y", stroke: "#b30000", strokeWidth: 2}),
     Plot.dot(rpData, {x: "gwl", y: "y", fill: "#b30000", r: 5}),
@@ -143,14 +143,17 @@ Plot.plot({
 })
 ```
 
-Lower means rarer. This heat sits near the top today and slides toward "an
-ordinary year" as the world warms.
+```js
+display(md`${T.rpCaption}`)
+```
 
-## The same heat, climate by climate
+```js
+display(md`## ${T.headingSameHeat}`)
+```
 
-Each panel is a different climate. The curve runs from a common day (left) to a
-rare one (right); the dashed line is this event. The further left it lands, the
-more ordinary this heat has become.
+```js
+display(md`${T.panelIntro}`)
+```
 
 ```js
 const panelLevels = Object.entries(node.warming_levels).map(([g, p]) => ({
@@ -158,16 +161,16 @@ const panelLevels = Object.entries(node.warming_levels).map(([g, p]) => ({
 }));
 const panels = [
   ...panelLevels.filter((p) => p.gwl < presentAnom),
-  {gwl: presentAnom, label: "Now", par: node.gev_present},
+  {gwl: presentAnom, label: T.now, par: node.gev_present},
   ...panelLevels.filter((p) => p.gwl >= presentAnom)
 ].sort((a, b) => a.gwl - b.gwl);
 const periods = d3.range(0, 1).flatMap(() =>
   d3.ticks(Math.log10(1.2), Math.log10(500), 60).map(e => Math.pow(10, e)));
 const curve = panels.flatMap(pl =>
-  periods.map(T => ({
+  periods.map(Tp => ({
     panel: pl.label,
-    T,
-    value: returnLevel(T, pl.par.shape, pl.par.loc, pl.par.scale)
+    T: Tp,
+    value: returnLevel(Tp, pl.par.shape, pl.par.loc, pl.par.scale)
   })));
 ```
 
@@ -178,7 +181,7 @@ Plot.plot({
   marginLeft: 52,
   marginBottom: 44,
   fx: {label: null, domain: panels.map(p => p.label)},
-  x: {type: "log", label: "Return period (years)", ticks: [2, 5, 10, 20, 50, 100, 200], grid: true},
+  x: {type: "log", label: T.axisReturnPeriod, ticks: [2, 5, 10, 20, 50, 100, 200], grid: true},
   y: {label: `${node.units === "degC" ? "°C" : node.units}`, grid: true},
   marks: [
     Plot.line(curve, {fx: "panel", x: "T", y: "value", stroke: "#b30000", strokeWidth: 1.8}),
@@ -213,31 +216,21 @@ function bboxPolygon([x0, y0, x1, y1]) {
 const RP_CAP = 200;
 const RP_COLOUR_MAX = 100;
 const round1 = (x) => Math.round(x * 10) / 10;
-// Slider stops: two cooler historical reference climates, "Now", then the
-// future warming levels. 0.0 = 1850–1900 pre-industrial; 1.0 ≈ the mid-2010s.
-const LEVELS = new Map([
-  ["1850–1900", "0.0"], ["Recent (~1 °C)", "1.0"], ["Now", "now"],
-  ["+1.5 °C", "1.5"], ["+2 °C", "2.0"], ["+3 °C", "3.0"]
-]);
 // Return period for display: null means the event exceeds the distribution's
-// upper bound in that climate (essentially never).
-const fmtRp = (v) => (v == null ? "never" : `1-in-${Math.round(v)}`);
+// upper bound in that climate (essentially never). Localised via the string table.
+const fmtRp = T.fmtRp;
 // Human label for a level in a colour-legend / caption context.
-const LEVEL_LABEL = {
-  "0.0": "in 1850–1900", "1.0": "at ~1 °C (recent past)", "now": "now",
-  "1.5": "at +1.5 °C", "2.0": "at +2 °C", "3.0": "at +3 °C"
-};
-// Ordered slider stops (cool → warm) for the local-peak maps, and their labels.
+const LEVEL_LABEL = T.levelLabel;
+// Ordered slider stops (cool → warm) for the local-peak maps; keys are
+// language-neutral, names are localised.
 const LEVEL_KEYS = ["0.0", "1.0", "now", "1.5", "2.0", "3.0"];
-const LEVEL_NAMES = ["1850–1900", "Recent ~1 °C", "Now", "+1.5 °C", "+2 °C", "+3 °C"];
+const LEVEL_NAMES = T.levelNames;
 const NOW_INDEX = 2;
-// Plain-language readout for each slider stop: the warming amount (bold) and a
-// one-line, jargon-free description of what that climate is.
+// Plain-language readout for each slider stop: the warming amount (bold, neutral)
+// and a one-line, localised description of what that climate is.
 const GWL_DEG = ["0 °C", "+1 °C", `+${round1(lookup.metadata.present_gmst_anom)} °C`,
   "+1.5 °C", "+2 °C", "+3 °C"];
-const GWL_BLURB = ["before global warming", "the climate of the mid-2010s", "today",
-  "the Paris Agreement's tougher goal", "the Paris Agreement's limit",
-  "where current policies are heading"];
+const GWL_BLURB = T.gwlBlurb;
 // Weather-map style discrete bands: filled categories + contour lines.
 const TEMP_THRESHOLDS = [21, 24, 27, 30, 33, 36, 39];
 const TEMP_COLORS = ["#ffffb2", "#fee391", "#fec44f", "#fe9929", "#ec7014",
@@ -333,12 +326,10 @@ function localTempMap(g, borders, level, width) {
     metricKey: "local_txx",
     thresholds: TEMP_THRESHOLDS, colors: TEMP_COLORS, iso: "#7f2704",
     tickFormat: (d) => `${d}°`,
-    label: level === "now"
-      ? "Local peak reached (°C)"
-      : `Local peak of an equally rare event ${LEVEL_LABEL[level]} (°C)`,
+    label: level === "now" ? T.tempMapNow : T.tempMapLevel(LEVEL_LABEL[level]),
     field: (d) => tempAtLevel(d, "local_txx", level),
     channels: {
-      "now (°C)": (d) => round1(d.x_obs),
+      [`${T.now} (°C)`]: (d) => round1(d.x_obs),
       "1850–1900 (°C)": (d) => round1(tempAtLevel(d, "local_txx", "0.0")),
       "+2 °C (°C)": (d) => round1(tempAtLevel(d, "local_txx", "2.0")),
       "+3 °C (°C)": (d) => round1(tempAtLevel(d, "local_txx", "3.0"))
@@ -352,11 +343,11 @@ function localRpMap(g, borders, metric, level, width) {
     bbox: lookup.regions[region].bbox, // clip the coarse Europe grid to France
     blur: 7, // wider averaging kernel — smooths the coarse 1.5° field
     thresholds: RP_THRESHOLDS, colors: RP_COLORS, iso: "#33333a",
-    tickFormat: (d) => `1-in-${d}`,
-    label: `How often this heat hits ${level === "now" ? "now" : LEVEL_LABEL[level]} (1-in-N years)`,
+    tickFormat: (d) => T.tickOneIn(d),
+    label: T.rpMapLabel(level === "now" ? T.now : LEVEL_LABEL[level]),
     field: (d) => rpAtLevel(d, level) ?? RP_CAP,
     channels: {
-      "now": (d) => fmtRp(d.present_rp),
+      [T.now]: (d) => fmtRp(d.present_rp),
       "1850–1900": (d) => fmtRp(d.rp["0.0"]),
       "+2 °C": (d) => fmtRp(d.rp["2.0"]),
       "+3 °C": (d) => fmtRp(d.rp["3.0"])
@@ -365,21 +356,20 @@ function localRpMap(g, borders, metric, level, width) {
 }
 ```
 
-## See the heat across France
+```js
+display(md`## ${T.headingSeeHeat}`)
+```
 
-Two views of **this heatwave**, placed in different climates: *how hot* its worst
-day gets, and *how often* a day that hot happens. Both are anchored to this event
-— **not an average summer**. The slider doesn't warm up a typical day; it asks
-what an extreme *as rare as June 2026* looks like in each climate. Drag it from
-the world before global warming toward a much hotter future, and use the tabs to
-switch views.
+```js
+display(md`${T.seeHeatIntro}`)
+```
 
 ```js
 const gridHires = await FileAttachment("data/grid_france_hires.json").json();
 ```
 
 ```js
-const levelIdx = view(Inputs.range([0, 5], {step: 1, value: NOW_INDEX, label: "Global warming"}));
+const levelIdx = view(Inputs.range([0, 5], {step: 1, value: NOW_INDEX, label: T.sliderLabel}));
 ```
 
 ```js
@@ -388,15 +378,14 @@ const mapLevel = LEVEL_KEYS[Math.round(levelIdx)];
 
 ```js
 html`<div class="gwl-readout">
-  <div class="gwl-deg">${GWL_DEG[Math.round(levelIdx)]}<small> of global warming</small></div>
+  <div class="gwl-deg">${GWL_DEG[Math.round(levelIdx)]}<small> ${T.ofGlobalWarming}</small></div>
   <div class="gwl-sub"><b>${LEVEL_NAMES[Math.round(levelIdx)]}</b> — ${GWL_BLURB[Math.round(levelIdx)]}</div>
 </div>`
 ```
 
 ```js
 const mapView = view((() => {
-  const r = Inputs.radio(["How hot it gets", "How often it happens"],
-    {value: "How hot it gets"});
+  const r = Inputs.radio([T.tabHot, T.tabOften], {value: T.tabHot});
   r.classList.add("map-tabs");
   return r;
 })());
@@ -405,36 +394,27 @@ const mapView = view((() => {
 ```js
 // Read-this-first guidance, above the map so it isn't missed. Phrased to keep the
 // "comparable event, not average summer" anchor explicit for both views.
-mapView === "How hot it gets"
-  ? html`<div class="map-guide"><b>How hot it gets.</b> The peak temperature of a
-      heatwave <b>as rare as this one</b> in the chosen climate — town by town,
-      deep red the fiercest. At <b>Now</b> it is the peak this June actually
-      reached; slide warmer and the same once-in-a-generation extreme keeps
-      climbing. (This is the rare event getting hotter, not the average summer.)</div>`
-  : html`<div class="map-guide"><b>How often it happens.</b> For each area, how
-      often a day <b>as hot as this heatwave's local peak</b> comes around in the
-      chosen climate. <b>Deep purple</b> = happens often (an ordinary summer's day);
-      <b>grey</b> = a once-in-a-lifetime rarity. Read the colours as odds:
-      “1-in-30” means a day this hot is expected about <b>once every 30 years</b>.
-      Slide warmer and grey turns purple — today's rare heat becomes routine.</div>`
+display(html`<div class="map-guide">${md`${mapView === T.tabHot ? T.mapGuideHot : T.mapGuideOften}`}</div>`)
 ```
 
 ```js
-mapView === "How hot it gets"
+mapView === T.tabHot
   ? localTempMap(gridHires, borders, mapLevel, width)
   : localRpMap(grid, borders, metric, mapLevel, width)
 ```
 
-## What the current value is built from
+```js
+display(md`## ${T.headingBuilt}`)
+```
 
 ```js
 const bp = live.blend_provenance;
-html`<div class="provenance">
-  Live value blends ERA5T reanalysis (through <b>${bp.era5t_last_day}</b>) with the
-  ECMWF HRES forecast (cycles ${bp.cycles_used.join(", ")}), bias-corrected by
-  ${bp.forecast_bias_vs_era5t} &deg;C onto the reanalysis and shifted
-  ${live.era5t_ref_offset} &deg;C onto the reference footing. Peak from
-  <b>${liveMetric.peak_source}</b> on ${liveMetric.peak_day}.
-  See <a href="./methods">Methods and provenance</a>.
-</div>`
+display(html`<div class="provenance">${md`${T.provenance({
+  era5t: bp.era5t_last_day,
+  cycles: bp.cycles_used.join(", "),
+  bias: bp.forecast_bias_vs_era5t,
+  offset: live.era5t_ref_offset,
+  src: liveMetric.peak_source,
+  day: liveMetric.peak_day
+})}`}</div>`)
 ```
