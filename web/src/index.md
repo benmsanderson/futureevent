@@ -367,9 +367,12 @@ function localRpMap(g, borders, metric, level, width) {
 
 ## See the heat across France
 
-How hot the worst day gets, and how unusual that is — and how both change as the
-world warms. Slide from the climate before global warming toward a much hotter
-future, and switch between the two views.
+Two views of **this heatwave**, placed in different climates: *how hot* its worst
+day gets, and *how often* a day that hot happens. Both are anchored to this event
+— **not an average summer**. The slider doesn't warm up a typical day; it asks
+what an extreme *as rare as June 2026* looks like in each climate. Drag it from
+the world before global warming toward a much hotter future, and use the tabs to
+switch views.
 
 ```js
 const gridHires = await FileAttachment("data/grid_france_hires.json").json();
@@ -400,19 +403,26 @@ const mapView = view((() => {
 ```
 
 ```js
+// Read-this-first guidance, above the map so it isn't missed. Phrased to keep the
+// "comparable event, not average summer" anchor explicit for both views.
 mapView === "How hot it gets"
-  ? localTempMap(gridHires, borders, mapLevel, width)
-  : localRpMap(grid, borders, metric, mapLevel, width)
+  ? html`<div class="map-guide"><b>How hot it gets.</b> The peak temperature of a
+      heatwave <b>as rare as this one</b> in the chosen climate — town by town,
+      deep red the fiercest. At <b>Now</b> it is the peak this June actually
+      reached; slide warmer and the same once-in-a-generation extreme keeps
+      climbing. (This is the rare event getting hotter, not the average summer.)</div>`
+  : html`<div class="map-guide"><b>How often it happens.</b> For each area, how
+      often a day <b>as hot as this heatwave's local peak</b> comes around in the
+      chosen climate. <b>Deep purple</b> = happens often (an ordinary summer's day);
+      <b>grey</b> = a once-in-a-lifetime rarity. Read the colours as odds:
+      “1-in-30” means a day this hot is expected about <b>once every 30 years</b>.
+      Slide warmer and grey turns purple — today's rare heat becomes routine.</div>`
 ```
 
 ```js
 mapView === "How hot it gets"
-  ? html`<div class="note">The hottest afternoon, town by town — deep red is the
-      fiercest heat. Slide forward and the same once-in-a-generation day keeps
-      getting hotter.</div>`
-  : html`<div class="note">How rare today's heat is for each area: deep purple is
-      an ordinary summer's day, grey a once-in-a-lifetime rarity. Slide forward and
-      grey turns to purple — what is rare today becomes a regular event.</div>`
+  ? localTempMap(gridHires, borders, mapLevel, width)
+  : localRpMap(grid, borders, metric, mapLevel, width)
 ```
 
 ## What the current value is built from

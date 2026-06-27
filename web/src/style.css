@@ -91,3 +91,16 @@ input[type="number"]:has(+ input[type="range"]) {
   background: var(--hot); color: #fff; border-color: var(--hot);
 }
 .map-tabs input { position: absolute; opacity: 0; pointer-events: none; }
+
+/* Read-this-first guidance shown directly above the map (not the muted footnote
+   .note, which users miss below the figure). A light callout with a hot accent. */
+.map-guide {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: #fbf4f1;
+  border-left: 3px solid var(--hot);
+  border-radius: 0 6px 6px 0;
+  padding: 0.6rem 0.9rem;
+  margin: 0.2rem 0 0.8rem;
+}
