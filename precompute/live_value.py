@@ -128,6 +128,18 @@ def main():
                       max_lead_hours=args.max_lead_hours)
     out = args.out or os.path.join(config.OUTPUT_DIR, f"live_{args.region}.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
+    # Preserve a previously-merged france_peak. It is added by precompute.local_peak,
+    # which needs the 0.25 deg climatology cache and so does not run in the
+    # lightweight CI refresh; without this, each live_value run would drop the
+    # local-peak headline from the page.
+    if os.path.exists(out):
+        try:
+            with open(out) as fh:
+                prev = json.load(fh)
+            if isinstance(prev, dict) and "france_peak" in prev:
+                live.setdefault("france_peak", prev["france_peak"])
+        except (json.JSONDecodeError, OSError):
+            pass
     with open(out, "w") as fh:
         # fail loud on any non-finite that would break JSON.parse in the browser
         json.dump(live, fh, indent=2, allow_nan=False)
