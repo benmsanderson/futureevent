@@ -72,16 +72,20 @@ input[type="number"]:has(+ input[type="range"]) {
   display: none;
 }
 
-/* Bold warming-level readout beside the slider. */
-.gwl-readout { margin: 0.3rem 0 0.9rem; }
-.gwl-deg {
-  font-size: 1.7rem; font-weight: 800; color: var(--hot); line-height: 1.1;
+/* Bold warming-level readout beside the slider. Compact, single-row (deg and
+   description on one baseline) so the map sits close under the slider. */
+.gwl-readout {
+  margin: 0.1rem 0 0.35rem;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.05rem 0.6rem;
 }
-.gwl-deg small { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
-.gwl-sub { font-size: 0.95rem; color: var(--ink); margin-top: 0.1rem; }
+.gwl-deg {
+  font-size: 1.3rem; font-weight: 800; color: var(--hot); line-height: 1.15;
+}
+.gwl-deg small { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.gwl-sub { font-size: 0.95rem; color: var(--ink); margin-top: 0; }
 
 /* Tab-style switch between the two maps (built from Inputs.radio). */
-.map-tabs { margin: 0.4rem 0 0.6rem; display: block !important; }
+.map-tabs { margin: 0.2rem 0 0.4rem; display: block !important; }
 .map-tabs label {
   display: inline-block; padding: 0.4rem 1.05rem; margin: 0 0.4rem 0.3rem 0;
   border: 1px solid #cfd3da; border-radius: 6px; cursor: pointer;
@@ -126,12 +130,26 @@ input[type="number"]:has(+ input[type="range"]) {
 /* Read-this-first guidance shown directly above the map (not the muted footnote
    .note, which users miss below the figure). A light callout with a hot accent. */
 .map-guide {
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: 0.92rem;
+  line-height: 1.45;
   color: var(--ink);
   background: #fbf4f1;
   border-left: 3px solid var(--hot);
   border-radius: 0 6px 6px 0;
-  padding: 0.6rem 0.9rem;
-  margin: 0.2rem 0 0.8rem;
+  padding: 0.5rem 0.8rem;
+  margin: 0.2rem 0 0.4rem;
 }
+
+/* --- Compact vertical rhythm ---------------------------------------------
+   Tighten the gaps Observable's default theme leaves between blocks so the
+   page (especially slider → readout → tabs → guide → map) scrolls less. */
+/* The warming slider renders as a <form>; trim its default margins so the
+   readout and map sit close beneath it. (The map tabs and metric radio keep
+   their own spacing.) */
+form:has(input[type="range"]) { margin: 0.2rem 0 0.1rem; }
+/* Plot output and section headings carry large default margins. */
+figure { margin: 0.5rem 0; }
+h1 { margin: 0.6rem 0 0.4rem; }
+h2 { margin: 1rem 0 0.4rem; }
+/* Trim the lead/intro paragraphs that follow each heading. */
+h2 + p, h1 + p { margin-top: 0.2rem; }
