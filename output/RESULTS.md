@@ -140,14 +140,16 @@ the coarse model fields sampled to 0.25 deg before fitting — applying a coarse
 change factor to a fine present fit is a documented approximation (it carries the
 large-scale response, not fine-scale changes in the response).
 
-**France peak for the June 2026 event.** Hottest single metropolitan-France
-0.25 deg cell (owner's chosen definition). Result (2026-06-26 refresh, forecast
-peak on 2026-06-23):
+**France peak for the June 2026 event.** Headline cell = the hottest
+metropolitan-France 0.25 deg cell whose present return period is *credible and
+genuinely rare* (`config.LOCAL_RARE_RP` <= rp < `config.RP_DISPLAY_CAP`), falling
+back to hottest-credible then hottest-overall. Result (2026-06-26 refresh,
+forecast peak on 2026-06-23):
 
 | quantity | value |
 | --- | --- |
-| hottest cell | 41.9 degC at 43.75 degN, 1.25 degW (Landes/Aquitaine) |
-| present return period | >= 1-in-1000 yr (capped; see below) |
+| headline cell | 41.5 degC near Bordeaux (45.25 degN, 1.0 degW), 1-in-76 now, 1-in-18 at +2 degC |
+| absolute hottest cell | 41.9 degC at 43.75 degN, 1.25 degW (Landes; capped RP, not used as headline) |
 | France 0.25 deg peak field | min 18.9 / mean 36.9 / max 41.9 degC |
 | cells over 40 / 38 degC | 80 / 448 of 1034 |
 
@@ -160,20 +162,20 @@ days. With `era5t_last` now taken from the last day carrying real data, the fiel
 is ~4 degC warmer in the mean and the event reads as **locally severe**:
 Toulouse 39.6 degC (1-in-9, up from 36.3/1-in-1.6), a coherent 41-42 degC cluster
 across Aquitaine/the Landes, below but approaching the 2003/2019 local records
-(43-44 degC). The France-wide *extent* is still notable, but it is no longer the
-only story.
+(43-44 degC).
 
-**Return-period cap.** A broad event reaching normally-cool maritime/northern
-cells lands far outside their narrow historical range, so the per-cell GEV
-extrapolates to spurious return periods (up to ~1-in-1.2M before fixing). Displayed
-return periods are clamped to `config.RP_DISPLAY_CAP` (1-in-1000) and read as
-">= cap" / "off the chart"; the per-cell rarity remains noisy between adjacent
-cells (thin-tail instability), so the absolute-hottest cell can sit on a capped
-RP while a near-equal neighbour reads 1-in-3. The hottest cell is now genuinely
-rare (present RP >= 5), so by the owner's rule the local "1-in-N now -> 1-in-M at
-+2 degC" framing applies — but the front-end severity copy in `web/src/index.md`
-should be revisited (it still leads with "broad but moderate"), and the values
-remain forecast-sourced until the reanalysis refresh lands.
+**Return-period cap and the headline cell.** A broad event reaching normally-cool
+maritime/northern cells lands far outside their narrow historical range, so the
+per-cell GEV extrapolates to spurious return periods (up to ~1-in-1.2M before
+fixing). Displayed return periods are clamped to `config.RP_DISPLAY_CAP`
+(1-in-1000); the per-cell rarity is also noisy between adjacent cells (thin-tail
+instability), so the *absolute*-hottest cell (41.9 degC) sits on a capped, untrust-
+worthy RP while a near neighbour reads 1-in-3. The headline therefore picks the
+hottest cell that is both **credible** (rp < cap) and **genuinely rare** (rp >=
+`LOCAL_RARE_RP`): 41.5 degC near Bordeaux at 1-in-76, a real local extreme that
+warms to 1-in-18 at +2 degC. Values remain forecast-sourced until the reanalysis
+refresh lands. (Front-end copy in `web/src/index.md` carries the matching adaptive
+framing.)
 
 All emitted values are finite (`null`, never `Infinity`/`NaN`; written with
 `allow_nan=False`); `live_france.json`, `grid_europe.json` and

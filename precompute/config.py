@@ -174,6 +174,11 @@ SENSITIVITY_FLAG_RATIO = 2.0
 # should read as ">= cap" ("off the chart"), not a precise figure.
 RP_DISPLAY_CAP = 1000.0
 
+# A local peak counts as "genuinely rare" (worth the "1-in-N now -> 1-in-M at
+# +2 degC" framing) only at/above this present return period. Used to pick the
+# france_peak headline cell; mirrors the front-end's rare-vs-extent threshold.
+LOCAL_RARE_RP = 5.0
+
 
 def cap_rp(years):
     """Clamp a return period (years) to RP_DISPLAY_CAP; passes None through."""

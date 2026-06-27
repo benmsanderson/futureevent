@@ -210,7 +210,11 @@ def build_local_peak(models=None, use_cache: bool = True,
     levels = sorted(set(config.HISTORICAL_LEVELS) | set(config.WARMING_LEVELS))
 
     cells = []
-    peak = None  # (value, lat, lon, present_block, warming_block)
+    # Headline-cell candidates, in priority order (each: value, lat, lon, p_now,
+    # warming_block). See the selection below for the rationale.
+    peak_rare = None  # hottest cell that is credibly rare (5 <= rp < cap)
+    peak_cred = None  # hottest credible cell (rp < cap)
+    peak_any = None   # hottest cell overall (last-resort fallback)
     for j, lat in enumerate(ref_lats):
         for i, lon in enumerate(ref_lons):
             if not mask[j, i]:
@@ -252,9 +256,24 @@ def build_local_peak(models=None, use_cache: bool = True,
                 "rp": rp, "ratio": ratio, "rl": rl,
             }
             cells.append(cell)
-            if peak is None or x > peak[0]:
-                peak = (x, float(lat), float(lon), p_now, levblock)
+            # Headline cell. A broad event reaching normally-cool cells lands far
+            # outside their narrow range, where the per-cell GEV extrapolates to a
+            # capped/degenerate return period (thin-tail noise) — picking the
+            # hottest cell put a numerically unstable, sometimes always-hot (1-in-3)
+            # value in the headline. Prefer the hottest cell that is also *credibly
+            # rare* (5 <= rp < cap): a real, trustworthy local extreme. Fall back
+            # to hottest credible, then hottest overall.
+            tup = (x, float(lat), float(lon), p_now, levblock)
+            if peak_any is None or x > peak_any[0]:
+                peak_any = tup
+            if p_now > 1.0 / config.RP_DISPLAY_CAP:          # credible (not capped)
+                if peak_cred is None or x > peak_cred[0]:
+                    peak_cred = tup
+                if p_now <= 1.0 / config.LOCAL_RARE_RP:      # also genuinely rare
+                    if peak_rare is None or x > peak_rare[0]:
+                        peak_rare = tup
 
+    peak = peak_rare or peak_cred or peak_any
     if peak is None:
         raise RuntimeError("no valid metropolitan-France cell found for france_peak")
 

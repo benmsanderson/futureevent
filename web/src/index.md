@@ -41,34 +41,52 @@ html`<div class="headline">
 // event (live.france_peak, from the local_txx precompute). Shown only if the
 // local-peak precompute has run; the France-wide average above stays the lead.
 //
-// The framing is adaptive and honest. A local peak is a "rare" story only where
-// the hottest cell's own climatology makes the value unusual. For a broad-but-
-// moderate event the hottest cell sits in an always-hot region (return period
-// ~1 yr), where the exceptional thing is the event's France-wide *extent*, not
-// the local peak — so we say that, rather than quoting a misleading 1-in-1 that
-// barely shifts with warming. A future event with a genuinely rare local peak
-// (rp ≥ 5) gets the "1-in-N now → 1-in-M at +2 °C" framing instead.
+// The framing is adaptive and honest, with three regimes for the hottest cell:
+//   1. always-hot region (rp ~1 yr): the local peak is not the story — the
+//      event's France-wide *extent* is — so we say that.
+//   2. genuinely rare and on-scale (5 ≤ rp < cap): "1-in-N now → 1-in-M at +2 °C".
+//   3. off the charts (rp at the RP_DISPLAY_CAP, here 1000): the value is so far
+//      out of that cell's range that the per-cell GEV is capped/degenerate — and
+//      the +2 °C number is capped too, so the now→+2 comparison is meaningless.
+//      We say "off the charts" and drop the comparison rather than print
+//      "1-in-1000 becoming 1-in-1000", which reads as nonsense.
+const RP_CAP = 1000; // matches precompute config.RP_DISPLAY_CAP
 const fp = live.france_peak ?? null;
 const fpRp = fp?.present?.return_period_years ?? null;
 const fp2 = fp?.warming_levels?.["2.0"] ?? null;
+const fp2Rp = fp2?.return_period_years ?? null;
 const fpLoc = fp
   ? (fp.nearest_place ?? `at ${fp.lat.toFixed(2)}°N, ${Math.abs(fp.lon).toFixed(2)}°${fp.lon < 0 ? "W" : "E"}`)
   : "";
+// oneInN() already includes the word "about", so do not prepend it again.
 // This block declares variables, so its trailing expression is NOT
 // auto-displayed — render explicitly with display().
 if (fp) {
-  display(fpRp != null && fpRp >= 5
-    ? html`<div class="headline headline-local">
+  if (fpRp != null && fpRp >= RP_CAP) {
+    // regime 3: off the charts
+    display(html`<div class="headline headline-local">
         Locally, the peak reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
-        — about <b>${oneInN(fpRp)}</b> in today's climate${fp2 && fp2.return_period_years != null
-          ? html`, becoming <b>${oneInN(fp2.return_period_years)}</b> at <b>+2 &deg;C</b>` : ""}.
-      </div>`
-    : html`<div class="headline headline-local">
+        — so far above what that spot normally sees that it is <b>off the charts</b>
+        (rarer than 1-in-${RP_CAP} even in today's climate).
+      </div>`);
+  } else if (fpRp != null && fpRp >= 5) {
+    // regime 2: genuinely rare and on-scale. Only show the +2 °C shift when it is
+    // a meaningful, non-capped, lower value (warming makes the event more common).
+    const showShift = fp2Rp != null && fp2Rp < fpRp && fp2Rp < RP_CAP;
+    display(html`<div class="headline headline-local">
+        Locally, the peak reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
+        — <b>${oneInN(fpRp)}</b> in today's climate${showShift
+          ? html`, becoming <b>${oneInN(fp2Rp)}</b> at <b>+2 &deg;C</b>` : ""}.
+      </div>`);
+  } else {
+    // regime 1: always-hot cell — extent is the story
+    display(html`<div class="headline headline-local">
         Locally, the hottest spot reached <b>${fp.value.toFixed(1)} &deg;C</b> ${fpLoc}
         — hot, but not a record there (about what that always-warm area sees in a
         normal summer). What made this heatwave stand out is <b>how widespread it
         was</b> — the countrywide average is the rare part, not any single local peak.
       </div>`);
+  }
 }
 ```
 

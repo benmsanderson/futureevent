@@ -138,41 +138,41 @@
   },
   "france_peak": {
     "metric": "local_txx",
-    "value": 41.9,
-    "lat": 43.75,
-    "lon": -1.25,
-    "nearest_place": null,
+    "value": 41.53,
+    "lat": 45.25,
+    "lon": -1.0,
+    "nearest_place": "near Bordeaux",
     "peak_day": "2026-06-23",
     "present": {
-      "return_period_years": 1000.0,
-      "exceedance_prob": 0.0,
+      "return_period_years": 75.87,
+      "exceedance_prob": 0.013181,
       "gmst_anom": 1.3603
     },
     "warming_levels": {
       "0.0": {
-        "return_period_years": null,
-        "exceedance_prob": 0.0,
-        "probability_ratio_vs_present": 0.0
+        "return_period_years": 1000.0,
+        "exceedance_prob": 2.3e-05,
+        "probability_ratio_vs_present": 0.002
       },
       "1.0": {
-        "return_period_years": null,
-        "exceedance_prob": 0.0,
-        "probability_ratio_vs_present": 0.0
+        "return_period_years": 213.49,
+        "exceedance_prob": 0.004684,
+        "probability_ratio_vs_present": 0.355
       },
       "1.5": {
-        "return_period_years": 1000.0,
-        "exceedance_prob": 2e-06,
-        "probability_ratio_vs_present": 35.457
+        "return_period_years": 53.59,
+        "exceedance_prob": 0.018659,
+        "probability_ratio_vs_present": 1.416
       },
       "2.0": {
-        "return_period_years": 1000.0,
-        "exceedance_prob": 0.000279,
-        "probability_ratio_vs_present": 6051.571
+        "return_period_years": 18.47,
+        "exceedance_prob": 0.054137,
+        "probability_ratio_vs_present": 4.107
       },
       "3.0": {
-        "return_period_years": 63.31,
-        "exceedance_prob": 0.015794,
-        "probability_ratio_vs_present": 342604.595
+        "return_period_years": 3.97,
+        "exceedance_prob": 0.251659,
+        "probability_ratio_vs_present": 19.092
       }
     },
     "note": "hottest single metropolitan-France 0.25 deg ERA5T cell; ERA5 gridbox values run ~1-2 degC below the hottest station (known cool bias)."
