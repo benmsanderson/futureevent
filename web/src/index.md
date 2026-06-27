@@ -24,10 +24,18 @@ const lang = view(langInput);
 
 ```js
 const T = STR[lang];
+// Observable Framework has no `md` global; our dictionary strings carry trusted
+// inline HTML, so render them by setting innerHTML on an element.
+const el = (tag, htmlStr, cls) => {
+  const e = document.createElement(tag);
+  e.innerHTML = htmlStr;
+  if (cls) e.className = cls;
+  return e;
+};
 ```
 
 ```js
-display(md`# ${T.title}`)
+display(el("h1", T.title))
 ```
 
 ```js
@@ -45,14 +53,14 @@ const at2 = ev.warmingLevels["2.0"];
 ```
 
 ```js
-display(html`<div class="headline">${md`${T.headline({
+display(el("div", T.headline({
   xObs: xObs.toFixed(1),
   day: liveMetric.peak_day,
   rpNow: oneInN(ev.present.returnPeriod, lang),
   pct: (100 * ev.present.exceedanceProb).toFixed(0),
   rp2: oneInN(at2.returnPeriod, lang),
   ratio: at2.ratioVsPresent.toFixed(0)
-})}`}</div>`)
+}), "headline"))
 ```
 
 ```js
@@ -75,8 +83,8 @@ const fpRp = fp?.present?.return_period_years ?? null;
 const fp2 = fp?.warming_levels?.["2.0"] ?? null;
 const fp2Rp = fp2?.return_period_years ?? null;
 const fpLoc = locPhrase(fp, lang);
-// Render a markdown string inside the styled local-headline box.
-const localBox = (s) => display(html`<div class="headline headline-local">${md`${s}`}</div>`);
+// Render an HTML string inside the styled local-headline box.
+const localBox = (s) => display(el("div", s, "headline headline-local"));
 if (fp) {
   const value = fp.value.toFixed(1);
   if (fpRp != null && fpRp >= RP_DISPLAY_CAP) {
@@ -96,12 +104,12 @@ if (fp) {
 ```
 
 ```js
-display(html`<div class="note">${md`${T.note1}`}</div>`);
-display(html`<div class="note">${md`${T.note2}`}</div>`);
+display(el("div", T.note1, "note"));
+display(el("div", T.note2, "note"));
 ```
 
 ```js
-display(md`## ${T.headingOdds}`)
+display(el("h2", T.headingOdds))
 ```
 
 ```js
@@ -144,15 +152,15 @@ Plot.plot({
 ```
 
 ```js
-display(md`${T.rpCaption}`)
+display(el("p", T.rpCaption))
 ```
 
 ```js
-display(md`## ${T.headingSameHeat}`)
+display(el("h2", T.headingSameHeat))
 ```
 
 ```js
-display(md`${T.panelIntro}`)
+display(el("p", T.panelIntro))
 ```
 
 ```js
@@ -357,11 +365,11 @@ function localRpMap(g, borders, metric, level, width) {
 ```
 
 ```js
-display(md`## ${T.headingSeeHeat}`)
+display(el("h2", T.headingSeeHeat))
 ```
 
 ```js
-display(md`${T.seeHeatIntro}`)
+display(el("p", T.seeHeatIntro))
 ```
 
 ```js
@@ -394,7 +402,7 @@ const mapView = view((() => {
 ```js
 // Read-this-first guidance, above the map so it isn't missed. Phrased to keep the
 // "comparable event, not average summer" anchor explicit for both views.
-display(html`<div class="map-guide">${md`${mapView === T.tabHot ? T.mapGuideHot : T.mapGuideOften}`}</div>`)
+display(el("div", mapView === T.tabHot ? T.mapGuideHot : T.mapGuideOften, "map-guide"))
 ```
 
 ```js
@@ -404,17 +412,17 @@ mapView === T.tabHot
 ```
 
 ```js
-display(md`## ${T.headingBuilt}`)
+display(el("h2", T.headingBuilt))
 ```
 
 ```js
 const bp = live.blend_provenance;
-display(html`<div class="provenance">${md`${T.provenance({
+display(el("div", T.provenance({
   era5t: bp.era5t_last_day,
   cycles: bp.cycles_used.join(", "),
   bias: bp.forecast_bias_vs_era5t,
   offset: live.era5t_ref_offset,
   src: liveMetric.peak_source,
   day: liveMetric.peak_day
-})}`}</div>`)
+}), "provenance"))
 ```
