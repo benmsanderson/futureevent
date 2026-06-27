@@ -110,6 +110,19 @@ input[type="number"]:has(+ input[type="range"]) {
 .headline > p, .headline-local > p, .map-guide > p,
 .note > p, .provenance > p { margin: 0; }
 
+/* Forecast caveat: prominent amber callout shown until reanalysis lands. */
+.forecast-notice {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #5b4300;
+  background: #fff7e0;
+  border: 1px solid #f0c95a;
+  border-left: 4px solid #e0a200;
+  border-radius: 6px;
+  padding: 0.7rem 1rem;
+  margin: 0.6rem 0 1rem;
+}
+
 /* Read-this-first guidance shown directly above the map (not the muted footnote
    .note, which users miss below the figure). A light callout with a hot accent. */
 .map-guide {

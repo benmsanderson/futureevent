@@ -104,6 +104,15 @@ if (fp) {
 ```
 
 ```js
+// Forecast caveat — shown only while the event peak is still forecast-sourced
+// (peak_source is a forecast cycle, not "ERA5T"). Auto-hides once reanalysis
+// covers the peak and the live data refreshes.
+if (!/ERA5T/i.test(liveMetric.peak_source ?? "")) {
+  display(el("div", T.forecastNotice, "forecast-notice"));
+}
+```
+
+```js
 display(el("div", T.note1, "note"));
 display(el("div", T.note2, "note"));
 ```
