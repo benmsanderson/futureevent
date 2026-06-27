@@ -378,7 +378,16 @@ display(el("h2", T.headingSeeHeat))
 ```
 
 ```js
-display(el("p", T.seeHeatIntro))
+// Intensity shift at fixed rarity: how much hotter an *equally rare* France-wide
+// event is at +2/+3 °C vs today. Computed from the per-GWL GEV (return level at
+// the present return period), so it tracks the data when reanalysis refreshes.
+display(el("p", T.seeHeatIntro((() => {
+  const T0 = ev.present.returnPeriod;
+  const shift = (w) => returnLevel(T0, w.shape, w.loc, w.scale) - xObs;
+  const deg = (x) => lang === "fr" ? x.toFixed(1).replace(".", ",") : x.toFixed(1);
+  return {d2: deg(shift(node.warming_levels["2.0"])),
+          d3: deg(shift(node.warming_levels["3.0"]))};
+})())))
 ```
 
 ```js
