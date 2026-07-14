@@ -1,6 +1,6 @@
 {
   "schema": "live_event_value/0.1",
-  "generated": "2026-07-13T14:29:12Z",
+  "generated": "2026-07-14T19:18:01Z",
   "region": "france",
   "region_name": "France (metropolitan)",
   "lookup_version": "0.1.0",
@@ -8,23 +8,23 @@
   "era5t_ref_offset": 0.883,
   "offset_month": "2021-06",
   "blend_provenance": {
-    "today": "2026-07-13",
-    "era5t_last_day": "2026-07-05",
+    "today": "2026-07-14",
+    "era5t_last_day": "2026-07-08",
     "cycles_used": [
-      "20260713 06z",
-      "20260703 12z"
+      "20260714 06z",
+      "20260706 12z"
     ],
-    "forecast_bias_vs_era5t": -0.875,
+    "forecast_bias_vs_era5t": -0.756,
     "bias_overlap_days": [
-      "2026-07-03",
-      "2026-07-04",
-      "2026-07-05"
+      "2026-07-07",
+      "2026-07-08"
     ],
     "bias_flag": null,
     "leading_gap_days": [],
-    "interior_missing_days": [],
+    "interior_missing_days": [
+      "2026-07-06"
+    ],
     "source_by_day": {
-      "2026-06-23": "ERA5T",
       "2026-06-24": "ERA5T",
       "2026-06-25": "ERA5T",
       "2026-06-26": "ERA5T",
@@ -37,19 +37,19 @@
       "2026-07-03": "ERA5T",
       "2026-07-04": "ERA5T",
       "2026-07-05": "ERA5T",
-      "2026-07-06": "20260703 12z",
-      "2026-07-07": "20260703 12z",
-      "2026-07-08": "20260703 12z",
-      "2026-07-09": "20260703 12z",
-      "2026-07-10": "20260703 12z",
-      "2026-07-11": "20260703 12z",
-      "2026-07-12": "20260703 12z",
-      "2026-07-13": "20260713 06z",
-      "2026-07-14": "20260713 06z",
-      "2026-07-15": "20260713 06z",
-      "2026-07-16": "20260713 06z",
-      "2026-07-17": "20260713 06z",
-      "2026-07-18": "20260713 06z"
+      "2026-07-07": "ERA5T",
+      "2026-07-08": "ERA5T",
+      "2026-07-09": "20260706 12z",
+      "2026-07-10": "20260706 12z",
+      "2026-07-11": "20260706 12z",
+      "2026-07-12": "20260706 12z",
+      "2026-07-13": "20260706 12z",
+      "2026-07-14": "20260714 06z",
+      "2026-07-15": "20260714 06z",
+      "2026-07-16": "20260714 06z",
+      "2026-07-17": "20260714 06z",
+      "2026-07-18": "20260714 06z",
+      "2026-07-19": "20260714 06z"
     }
   },
   "metrics": {
@@ -95,39 +95,39 @@
     "tx3x": {
       "name": "Hottest 3-day mean of regional-mean daily tasmax (TX3x)",
       "units": "degC",
-      "x_obs_reference_footing": 31.419,
-      "peak_day": "2026-06-25",
+      "x_obs_reference_footing": 31.034,
+      "peak_day": "2026-06-26",
       "peak_source": "ERA5T",
       "present": {
         "gmst_anom": 1.3603,
-        "exceedance_prob": 0.005015103588635778,
-        "return_period_years": 199.4
+        "exceedance_prob": 0.01127373197340461,
+        "return_period_years": 88.7
       },
       "warming_levels": {
         "0.0": {
-          "exceedance_prob": 1.5951901463451215e-09,
+          "exceedance_prob": 1.8697340086555935e-06,
           "return_period_years": 1000.0,
-          "probability_ratio_vs_present": 3.1807720780879214e-07
+          "probability_ratio_vs_present": 0.00016584871922327093
         },
         "1.0": {
-          "exceedance_prob": 0.001099754602624587,
-          "return_period_years": 909.29,
-          "probability_ratio_vs_present": 0.21928851182987133
+          "exceedance_prob": 0.003163422954799351,
+          "return_period_years": 316.11,
+          "probability_ratio_vs_present": 0.2806012208079853
         },
         "1.5": {
-          "exceedance_prob": 0.008164942096466479,
-          "return_period_years": 122.47,
-          "probability_ratio_vs_present": 1.628070477939525
+          "exceedance_prob": 0.01714440252483335,
+          "return_period_years": 58.33,
+          "probability_ratio_vs_present": 1.5207388791287564
         },
         "2.0": {
-          "exceedance_prob": 0.034481768049748486,
-          "return_period_years": 29.0,
-          "probability_ratio_vs_present": 6.875584410237139
+          "exceedance_prob": 0.06056072908069194,
+          "return_period_years": 16.51,
+          "probability_ratio_vs_present": 5.371843966448575
         },
         "3.0": {
-          "exceedance_prob": 0.24480020574909708,
-          "return_period_years": 4.08,
-          "probability_ratio_vs_present": 48.81259208759201
+          "exceedance_prob": 0.3412889783605187,
+          "return_period_years": 2.93,
+          "probability_ratio_vs_present": 30.272937050981806
         }
       }
     }
