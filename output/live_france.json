@@ -1,6 +1,6 @@
 {
   "schema": "live_event_value/0.1",
-  "generated": "2026-07-15T13:39:10Z",
+  "generated": "2026-07-15T19:08:28Z",
   "region": "france",
   "region_name": "France (metropolitan)",
   "lookup_version": "0.1.0",
@@ -81,9 +81,9 @@
           "probability_ratio_vs_present": 1.6139541600345184
         },
         "2.0": {
-          "exceedance_prob": 0.11771364009637393,
+          "exceedance_prob": 0.1177136400963739,
           "return_period_years": 8.5,
-          "probability_ratio_vs_present": 6.073938069665864
+          "probability_ratio_vs_present": 6.0739380696658625
         },
         "3.0": {
           "exceedance_prob": 0.542599885959022,
@@ -100,24 +100,24 @@
       "peak_source": "ERA5T",
       "present": {
         "gmst_anom": 1.3603,
-        "exceedance_prob": 0.029344962881029755,
+        "exceedance_prob": 0.02934496288102975,
         "return_period_years": 34.08
       },
       "warming_levels": {
         "0.0": {
           "exceedance_prob": 8.053944028955439e-05,
           "return_period_years": 1000.0,
-          "probability_ratio_vs_present": 0.002744574618004361
+          "probability_ratio_vs_present": 0.0027445746180043613
         },
         "1.0": {
           "exceedance_prob": 0.010469557190529473,
           "return_period_years": 95.52,
-          "probability_ratio_vs_present": 0.3567752746178319
+          "probability_ratio_vs_present": 0.35677527461783193
         },
         "1.5": {
           "exceedance_prob": 0.04155540468853661,
           "return_period_years": 24.06,
-          "probability_ratio_vs_present": 1.4161000938052088
+          "probability_ratio_vs_present": 1.416100093805209
         },
         "2.0": {
           "exceedance_prob": 0.12014392923627285,
@@ -127,7 +127,7 @@
         "3.0": {
           "exceedance_prob": 0.5016017900732089,
           "return_period_years": 1.99,
-          "probability_ratio_vs_present": 17.093284190094263
+          "probability_ratio_vs_present": 17.093284190094266
         }
       }
     }
