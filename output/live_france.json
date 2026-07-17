@@ -1,6 +1,6 @@
 {
   "schema": "live_event_value/0.1",
-  "generated": "2026-07-17T02:25:32Z",
+  "generated": "2026-07-17T13:22:34Z",
   "region": "france",
   "region_name": "France (metropolitan)",
   "lookup_version": "0.1.0",
@@ -9,16 +9,16 @@
   "offset_month": "2021-06",
   "blend_provenance": {
     "today": "2026-07-17",
-    "era5t_last_day": "2026-07-10",
+    "era5t_last_day": "2026-07-11",
     "cycles_used": [
-      "20260716 18z",
-      "20260708 12z"
+      "20260717 06z",
+      "20260709 12z"
     ],
-    "forecast_bias_vs_era5t": -0.634,
+    "forecast_bias_vs_era5t": -0.714,
     "bias_overlap_days": [
-      "2026-07-08",
       "2026-07-09",
-      "2026-07-10"
+      "2026-07-10",
+      "2026-07-11"
     ],
     "bias_flag": null,
     "leading_gap_days": [],
@@ -38,18 +38,18 @@
       "2026-07-08": "ERA5T",
       "2026-07-09": "ERA5T",
       "2026-07-10": "ERA5T",
-      "2026-07-11": "20260708 12z",
-      "2026-07-12": "20260708 12z",
-      "2026-07-13": "20260708 12z",
-      "2026-07-14": "20260708 12z",
-      "2026-07-15": "20260708 12z",
-      "2026-07-16": "20260708 12z",
-      "2026-07-17": "20260716 18z",
-      "2026-07-18": "20260716 18z",
-      "2026-07-19": "20260716 18z",
-      "2026-07-20": "20260716 18z",
-      "2026-07-21": "20260716 18z",
-      "2026-07-22": "20260716 18z"
+      "2026-07-11": "ERA5T",
+      "2026-07-12": "20260709 12z",
+      "2026-07-13": "20260709 12z",
+      "2026-07-14": "20260709 12z",
+      "2026-07-15": "20260709 12z",
+      "2026-07-16": "20260709 12z",
+      "2026-07-17": "20260717 06z",
+      "2026-07-18": "20260717 06z",
+      "2026-07-19": "20260717 06z",
+      "2026-07-20": "20260717 06z",
+      "2026-07-21": "20260717 06z",
+      "2026-07-22": "20260717 06z"
     }
   },
   "metrics": {
@@ -95,39 +95,39 @@
     "tx3x": {
       "name": "Hottest 3-day mean of regional-mean daily tasmax (TX3x)",
       "units": "degC",
-      "x_obs_reference_footing": 29.736,
+      "x_obs_reference_footing": 29.816,
       "peak_day": "2026-07-13",
-      "peak_source": "20260708 12z",
+      "peak_source": "20260709 12z",
       "present": {
         "gmst_anom": 1.3603,
-        "exceedance_prob": 0.08625389152434097,
-        "return_period_years": 11.59
+        "exceedance_prob": 0.07791339774785987,
+        "return_period_years": 12.83
       },
       "warming_levels": {
         "0.0": {
-          "exceedance_prob": 0.0013790215696420118,
-          "return_period_years": 725.15,
-          "probability_ratio_vs_present": 0.01598793451832663
+          "exceedance_prob": 0.0010888972417960464,
+          "return_period_years": 918.36,
+          "probability_ratio_vs_present": 0.013975738105016173
         },
         "1.0": {
-          "exceedance_prob": 0.038645872333526135,
-          "return_period_years": 25.88,
-          "probability_ratio_vs_present": 0.4480478694995485
+          "exceedance_prob": 0.034206590845943026,
+          "return_period_years": 29.23,
+          "probability_ratio_vs_present": 0.4390334889083003
         },
         "1.5": {
-          "exceedance_prob": 0.11348665829896316,
-          "return_period_years": 8.81,
-          "probability_ratio_vs_present": 1.3157279781044668
+          "exceedance_prob": 0.1032177419658191,
+          "return_period_years": 9.69,
+          "probability_ratio_vs_present": 1.3247752626557001
         },
         "2.0": {
-          "exceedance_prob": 0.2615381161267296,
-          "return_period_years": 3.82,
-          "probability_ratio_vs_present": 3.0321891743623324
+          "exceedance_prob": 0.2432067958242629,
+          "return_period_years": 4.11,
+          "probability_ratio_vs_present": 3.1215016011921177
         },
         "3.0": {
-          "exceedance_prob": 0.7332198800265881,
-          "return_period_years": 1.36,
-          "probability_ratio_vs_present": 8.500716513407077
+          "exceedance_prob": 0.7105132500796403,
+          "return_period_years": 1.41,
+          "probability_ratio_vs_present": 9.119269222207123
         }
       }
     }
