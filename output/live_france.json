@@ -1,6 +1,6 @@
 {
   "schema": "live_event_value/0.1",
-  "generated": "2026-07-29T02:25:29Z",
+  "generated": "2026-07-29T08:37:18Z",
   "region": "france",
   "region_name": "France (metropolitan)",
   "lookup_version": "0.1.0",
@@ -9,16 +9,16 @@
   "offset_month": "2021-06",
   "blend_provenance": {
     "today": "2026-07-29",
-    "era5t_last_day": "2026-07-22",
+    "era5t_last_day": "2026-07-23",
     "cycles_used": [
-      "20260728 18z",
-      "20260720 12z"
+      "20260729 00z",
+      "20260721 12z"
     ],
-    "forecast_bias_vs_era5t": -0.715,
+    "forecast_bias_vs_era5t": -0.645,
     "bias_overlap_days": [
-      "2026-07-20",
       "2026-07-21",
-      "2026-07-22"
+      "2026-07-22",
+      "2026-07-23"
     ],
     "bias_flag": null,
     "leading_gap_days": [],
@@ -38,57 +38,61 @@
       "2026-07-20": "ERA5T",
       "2026-07-21": "ERA5T",
       "2026-07-22": "ERA5T",
-      "2026-07-23": "20260720 12z",
-      "2026-07-24": "20260720 12z",
-      "2026-07-25": "20260720 12z",
-      "2026-07-26": "20260720 12z",
-      "2026-07-27": "20260720 12z",
-      "2026-07-28": "20260720 12z",
-      "2026-07-29": "20260728 18z",
-      "2026-07-30": "20260728 18z",
-      "2026-07-31": "20260728 18z",
-      "2026-08-01": "20260728 18z",
-      "2026-08-02": "20260728 18z",
-      "2026-08-03": "20260728 18z"
+      "2026-07-23": "ERA5T",
+      "2026-07-24": "20260721 12z",
+      "2026-07-25": "20260721 12z",
+      "2026-07-26": "20260721 12z",
+      "2026-07-27": "20260721 12z",
+      "2026-07-28": "20260721 12z",
+      "2026-07-29": "20260729 00z",
+      "2026-07-30": "20260729 00z",
+      "2026-07-31": "20260729 00z",
+      "2026-08-01": "20260729 00z",
+      "2026-08-02": "20260729 00z",
+      "2026-08-03": "20260729 00z",
+      "2026-08-04": "20260729 00z",
+      "2026-08-05": "20260729 00z",
+      "2026-08-06": "20260729 00z",
+      "2026-08-07": "20260729 00z"
     }
   },
   "metrics": {
     "regional_mean_tasmax": {
       "name": "Regional-mean daily maximum temperature",
       "units": "degC",
-      "x_obs_reference_footing": 30.39,
+      "x_obs_reference_footing": 30.008,
       "peak_day": "2026-07-29",
-      "peak_source": "20260728 18z",
+      "peak_source": "20260729 00z",
       "present": {
         "gmst_anom": 1.3603,
-        "exceedance_prob": 0.09429908401520921,
-        "return_period_years": 10.6
+        "exceedance_prob": 0.1575178060512377,
+        "return_period_years": 6.35
       },
       "warming_levels": {
         "0.0": {
-          "exceedance_prob": 7.278999972692868e-05,
+          "exceedance_prob": 0.0008953532298243398,
           "return_period_years": 1000.0,
-          "probability_ratio_vs_present": 0.000771905692267261
+          "probability_ratio_vs_present": 0.005684139795173998
         },
         "1.0": {
-          "exceedance_prob": 0.03556809231018278,
-          "return_period_years": 28.12,
-          "probability_ratio_vs_present": 0.3771838579518557
+          "exceedance_prob": 0.06970651148044374,
+          "return_period_years": 14.35,
+          "probability_ratio_vs_present": 0.4425309952436074
         },
         "1.5": {
-          "exceedance_prob": 0.128830455530489,
-          "return_period_years": 7.76,
-          "probability_ratio_vs_present": 1.36618989331551
+          "exceedance_prob": 0.20481988993997094,
+          "return_period_years": 4.88,
+          "probability_ratio_vs_present": 1.3002967415210616
         },
         "2.0": {
-          "exceedance_prob": 0.3128724041715436,
-          "return_period_years": 3.2,
-          "probability_ratio_vs_present": 3.3178732056515137
+          "exceedance_prob": 0.4292022910382651,
+          "return_period_years": 2.33,
+          "probability_ratio_vs_present": 2.72478586261323
         },
         "3.0": {
-          "exceedance_prob": 0.8027593316881209,
-          "return_period_years": 1.25,
-          "probability_ratio_vs_present": 8.512906992380183
+          "exceedance_prob": 0.8840793507364355,
+          "return_period_years": 1.13,
+          "probability_ratio_vs_present": 5.612567702021322
         }
       }
     },
