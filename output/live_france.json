@@ -1,6 +1,6 @@
 {
   "schema": "live_event_value/0.1",
-  "generated": "2026-07-31T13:59:16Z",
+  "generated": "2026-07-31T19:21:29Z",
   "region": "france",
   "region_name": "France (metropolitan)",
   "lookup_version": "0.1.0",
@@ -100,7 +100,7 @@
       "peak_source": "ERA5T",
       "present": {
         "gmst_anom": 1.3603,
-        "exceedance_prob": 0.15803449119606322,
+        "exceedance_prob": 0.1580344911960632,
         "return_period_years": 6.33
       },
       "warming_levels": {
@@ -112,22 +112,22 @@
         "1.0": {
           "exceedance_prob": 0.07983087331853932,
           "return_period_years": 12.53,
-          "probability_ratio_vs_present": 0.5051484186417147
+          "probability_ratio_vs_present": 0.5051484186417148
         },
         "1.5": {
           "exceedance_prob": 0.19941333496324595,
           "return_period_years": 5.01,
-          "probability_ratio_vs_present": 1.2618342581673938
+          "probability_ratio_vs_present": 1.261834258167394
         },
         "2.0": {
           "exceedance_prob": 0.39949566547762594,
           "return_period_years": 2.5,
-          "probability_ratio_vs_present": 2.527901741285055
+          "probability_ratio_vs_present": 2.5279017412850555
         },
         "3.0": {
           "exceedance_prob": 0.8603968823827179,
           "return_period_years": 1.16,
-          "probability_ratio_vs_present": 5.4443613914337154
+          "probability_ratio_vs_present": 5.444361391433716
         }
       }
     }
