@@ -1,6 +1,6 @@
 {
   "schema": "live_event_value/0.1",
-  "generated": "2026-08-04T14:04:30Z",
+  "generated": "2026-08-04T19:29:04Z",
   "region": "france",
   "region_name": "France (metropolitan)",
   "lookup_version": "0.1.0",
@@ -125,9 +125,9 @@
           "probability_ratio_vs_present": 2.628043038915383
         },
         "3.0": {
-          "exceedance_prob": 0.836242478499953,
+          "exceedance_prob": 0.8362424784999529,
           "return_period_years": 1.2,
-          "probability_ratio_vs_present": 5.98891079285643
+          "probability_ratio_vs_present": 5.988910792856429
         }
       }
     }
