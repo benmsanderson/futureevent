@@ -1,15 +1,17 @@
 name: Refresh live event value
 
-# Scheduled job (separate from the heavy precompute) that re-blends ERA5T with
-# the latest ECMWF forecast and refreshes the event field of the map, then
-# commits the updated outputs. The commit to main triggers the Pages deploy.
+# Re-blends ERA5T with the latest ECMWF forecast and refreshes the event field of
+# the map, then commits the updated outputs. The commit triggers the Pages deploy.
 #
 # The precompute cache (per-model CMIP fits, ERA5 present grid) is restored
 # across runs, so only the live ERA5T and forecast reads happen each time; the
 # static present and change-factor fields are reused.
+#
+# The 6-hourly schedule was REMOVED once the June 2026 event settled onto ERA5T
+# reanalysis: with no FE_TODAY pin this job blends a wall-clock (now-months-later)
+# window and would overwrite the committed reanalysis outputs with an out-of-event
+# blend. Re-enable the schedule (or run via workflow_dispatch) for a new live event.
 on:
-  schedule:
-    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 permissions:

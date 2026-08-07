@@ -299,16 +299,23 @@ def event_field(ref_lats, ref_lons, era5t_ref_offset: float) -> tuple[dict, str]
             f"need >= {require.strip()}: the event peak is still forecast-sourced. "
             "Aborting so a forecast blend is not mistaken for reanalysis.")
 
-    cycles = blend.choose_cycles(pd.Timestamp(era5t_last).date())
-    fc = xr.concat([_to_180(_forecast_field(d, c)) for d, c in cycles], dim="time")
-    fc = fc.groupby("time").first()  # newest-cycle-wins (newest concatenated first)
-    fc = fc - _domain_bias(obs, fc)  # onto the ERA5T footing
+    # Drop forecast cycles issued after the (possibly pinned) window end, so a
+    # reanalysis refresh does not fold out-of-window forecast days into the max.
+    cycles = blend.choose_cycles(pd.Timestamp(era5t_last).date(), today=today)
 
     # the reference grid is already in the -180..180 frame
     obs_r = obs.interp({la: ref_lats, lo: ref_lons})
-    fc_r = fc.interp({la: ref_lats, lo: ref_lons})
-    fc_future = fc_r.sel(time=fc_r["time"] > era5t_last)
-    blended = xr.concat([obs_r, fc_future], dim="time").sortby("time")
+    if cycles:
+        fc = xr.concat([_to_180(_forecast_field(d, c)) for d, c in cycles],
+                       dim="time")
+        fc = fc.groupby("time").first()  # newest-cycle-wins (newest concatenated first)
+        fc = fc - _domain_bias(obs, fc)  # onto the ERA5T footing
+        fc_r = fc.interp({la: ref_lats, lo: ref_lons})
+        fc_future = fc_r.sel(time=fc_r["time"] > era5t_last)
+        blended = xr.concat([obs_r, fc_future], dim="time").sortby("time")
+    else:
+        # No forecast in play (reanalysis has cleared the whole window).
+        blended = obs_r.sortby("time")
     blended = blended.groupby("time").first()  # dedupe overlap, keep ERA5T
 
     # domain-mean argmax: the day the area-average daily field peaked

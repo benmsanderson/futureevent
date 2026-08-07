@@ -53,12 +53,21 @@ def _cycle_initday(date: str) -> dt.date:
     return dt.datetime.strptime(date, "%Y%m%d").date()
 
 
-def choose_cycles(era5t_last_day: dt.date) -> list[tuple[str, str]]:
+def choose_cycles(era5t_last_day: dt.date,
+                  today: dt.date | None = None) -> list[tuple[str, str]]:
     """Pick the freshest cycle plus an older anchor that overlaps ERA5T.
 
     The anchor is the most recent cycle initialised at least two days before
     ERA5T's last observed day, so its early steps coincide with ERA5T (bias) and
     its horizon spans the gap up to the freshest cycle.
+
+    When ``today`` is given, any cycle *issued after* ``today`` is dropped. In
+    normal live operation ``today`` is now, so the freshest real cycle is issued
+    on/before it and nothing is dropped. But when ``today`` is pinned in the past
+    (the reanalysis refresh, ``FE_TODAY``), the real "latest" cycle is weeks ahead
+    of the event window; its forecast days would otherwise be folded into the
+    per-cell TXx max and silently contaminate the event field with out-of-window
+    (e.g. high-summer) temperatures. Dropping it leaves a pure-reanalysis window.
     """
     date_prefixes, _ = forecast._s3_list("")
     date_prefixes = [p for p in date_prefixes if re.fullmatch(r"\d{8}/", p)]
@@ -88,6 +97,8 @@ def choose_cycles(era5t_last_day: dt.date) -> list[tuple[str, str]]:
             if any(k.endswith(".grib2") for k in keys):
                 chosen.append((date, cycle))
                 break
+    if today is not None:
+        chosen = [(d, c) for d, c in chosen if _cycle_initday(d) <= today]
     return chosen
 
 
@@ -104,7 +115,7 @@ def build_blend(region_key: str, recent_days: int = 40,
     obs = era5t_daily(region_key, start, end)
     era5t_last = max(obs.index)
 
-    cycles = choose_cycles(era5t_last)
+    cycles = choose_cycles(era5t_last, today=today)
     # newest-cycle-wins map of forecast day -> (value, init)
     fc_value: dict[dt.date, float] = {}
     fc_source: dict[dt.date, str] = {}

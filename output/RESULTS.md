@@ -50,44 +50,45 @@ trend-based present baseline) becomes roughly 1-in-5 at +2 degC and near-annual
 at +3 degC. The magnitudes and the probability ratios across the warming axis are
 in line with WWA-style attribution framing for major European heatwaves.
 
-## Live June 2026 event value (ERA5T + ECMWF forecast blend)
+## Live June 2026 event value (ERA5T reanalysis)
 
-Refreshed 2026-06-29: ERA5T has now ingested France through 2026-06-23, so the
-22-23 June rise is **reanalysis**; only the 24-25 June top of the event is still
-ECMWF HRES forecast. The blend uses ERA5T through June 23, an older long-horizon
-cycle (2026-06-21 12z) over the peak and the freshest cycle (2026-06-29 00z) for
-the tail. The forecast reads 0.76 degC cooler than ERA5T over the overlap days and
-is bias-corrected onto the ERA5T footing; the whole series is then shifted by the
-ERA5T-vs-reference offset (+0.88 degC) onto the reference GEV footing. NB the
-domain peak day is still 24 June (forecast); a full reanalysis refresh follows once
-ERA5T clears 24 June (~1 day). Live values move with each cycle until then.
+Refreshed 2026-08-08: ERA5T has fully ingested the event, so the whole 20-day
+window (2026-06-12 to 2026-07-02) is now **reanalysis** — the 24-25 June peak is
+ERA5T, not forecast. With the window pinned in the past (`FE_TODAY=2026-07-02`)
+the blend uses **no forecast cycle at all** (`choose_cycles` drops the now
+future-issued latest cycle), so `source_by_day` is ERA5T throughout and there is
+no forecast bias term. The series is shifted by the ERA5T-vs-reference offset
+(+0.88 degC) onto the reference GEV footing.
 
-Blended event values on the reference footing, and their rarity:
+Event values on the reference footing (reanalysis), and their rarity:
 
 | metric | peak (degC) | peak day | present | +1.5 | +2.0 | +3.0 |
 | --- | --- | --- | --- | --- | --- | --- |
-| regional_mean_tasmax | 31.6 | 2026-06-24 | 1-in-139 yr | 1-in-76 (1.8x) | 1-in-15 (9.2x) | 1-in-2 (58x) |
-| tx3x | 31.2 | 2026-06-25 | 1-in-134 yr | 1-in-85 (1.6x) | 1-in-22 (6.1x) | 1-in-3 (39x) |
+| regional_mean_tasmax | 31.8 | 2026-06-24 | 1-in-259 yr | 1-in-129 (2.0x) | 1-in-21 (12.3x) | 1-in-3 (92x) |
+| tx3x | 31.4 | 2026-06-25 | 1-in-199 yr | 1-in-122 (1.6x) | 1-in-29 (6.9x) | 1-in-4 (49x) |
 
-The live June 2026 France heatwave is, on the reference footing, a roughly
-1-in-60-year regional-mean daily extreme in the present climate (on the warmer
-trend-based present baseline). It becomes about 1-in-9 at +2 degC (roughly 6 times
-more likely) and near-annual at +3 degC. (Earlier builds understated this: a
-since-fixed bug truncated the event field at ERA5T's last day and dropped the
-forecast tail over the peak; see "Local-peak" below.)
+On the reference footing the regional-mean daily extreme is about 1-in-260 years
+in the present climate (trend-based present baseline); it becomes roughly 1-in-21
+at +2 degC (about 12 times more likely) and near-annual at +3 degC. Moving off the
+forecast blend onto full reanalysis raised the peak ~0.2 degC and the present
+return period accordingly (from ~1-in-139 on the 2026-06-29 forecast build).
+(Earlier builds understated the *local* field via a since-fixed bug that truncated
+the event field at ERA5T's last day and dropped the forecast tail over the peak;
+see "Local-peak" below.)
 The full live record, with per-day source and provenance, is in
 `output/live_france.json`. See `precompute/live_value.py` to regenerate it
-(`python -m precompute.live_value --region france`); the value moves with each
-new forecast cycle and as ERA5T catches up.
+(`FE_TODAY=2026-07-02 python -m precompute.live_value --region france`); the event
+is now settled on reanalysis and no longer moves with forecast cycles.
 
 ## Spatial maps (grid_europe.json)
 
 The grid mirrors the point method at every cell of a Europe box (lon -10..25,
 lat 36..56) on the 1.5 deg reference grid: per-cell obs-anchored present GEV from
 ERA5, per-cell CMIP6 ensemble-median change factors (24 models, each sampled to
-the reference cells before fitting), and a per-cell event value from the ERA5T +
-forecast blend. The present level is the trend-based +1.36 degC, consistent with
-the point lookup.
+the reference cells before fitting), and a per-cell event value from the ERA5T
+blend (reanalysis-only now the event has settled; ERA5T + ECMWF forecast while a
+live event is still in the forecast window). The present level is the trend-based
++1.36 degC, consistent with the point lookup.
 
 Each cell carries, at each global-warming level, the return period of the event
 (`rp`), the probability ratio vs present (`ratio`), and the temperature of an
@@ -143,14 +144,14 @@ large-scale response, not fine-scale changes in the response).
 **France peak for the June 2026 event.** Headline cell = the hottest
 metropolitan-France 0.25 deg cell whose present return period is *credible and
 genuinely rare* (`config.LOCAL_RARE_RP` <= rp < `config.RP_DISPLAY_CAP`), falling
-back to hottest-credible then hottest-overall. Result (2026-06-29 refresh; 22-23
-June reanalysis, 24 June still forecast):
+back to hottest-credible then hottest-overall. Result (2026-08-08 refresh; event
+fully on ERA5T reanalysis, domain peak day 24 June):
 
 | quantity | value |
 | --- | --- |
 | headline cell | 43.6 degC near Dax (44.25 degN, 1.0 degW), 1-in-31 now, 1-in-10 at +2 degC |
-| France 0.25 deg peak field | min 20.9 / mean 37.6 / max 43.6 degC |
-| cells over 40 / 38 degC | 251 / 509 of 1034 |
+| France 0.25 deg peak field | min 20.9 / mean 37.9 / max 43.6 degC |
+| cells over 40 / 38 degC | 311 / 642 of 1034 |
 
 The absolute-hottest cell now *is* the headline cell (43.6 degC, present rp 1-in-31
 — credible and genuinely rare), so no separate capped cell is needed this refresh.
@@ -161,7 +162,7 @@ derived ERA5T's last day from the zarr time-axis maximum, which (because the sto
 runs to 2050 with NaN placeholders) returned the *window end*, so the forecast
 tail over the June 23-24 peak was dropped and the per-cell max only saw pre-event
 days. With `era5t_last` taken from the last day carrying real data — and now with
-ERA5T reanalysis through 23 June — the field is ~5 degC warmer in the mean and the
+ERA5T reanalysis over the full event window — the field is ~5 degC warmer in the mean and the
 event reads as **locally severe**: Toulouse 40.5 degC (1-in-18, up from
 36.3/1-in-1.6, and on reanalysis), a coherent 41-43 degC cluster across
 Aquitaine/the Landes, at the level of the 2003 local record (~43 degC).
@@ -172,9 +173,9 @@ extrapolates to spurious return periods (up to ~1-in-1.2M before fixing). Displa
 return periods are clamped to `config.RP_DISPLAY_CAP` (1-in-1000), and the headline
 picks the hottest cell that is both **credible** (rp < cap) and **genuinely rare**
 (rp >= `LOCAL_RARE_RP`) — here 43.6 degC near Dax at 1-in-31, warming to 1-in-10 at
-+2 degC. The 24 June domain peak is still forecast, so values shift a little when
-the full reanalysis lands. (Front-end copy in `web/src/index.md` carries the
-matching adaptive framing and a forecast caveat that auto-hides on reanalysis.)
++2 degC. The event is now fully on ERA5T reanalysis (peak day 24 June), so these
+values are settled. (Front-end copy in `web/src/index.md` carries the matching
+adaptive framing and a forecast caveat that auto-hides on reanalysis.)
 
 All emitted values are finite (`null`, never `Infinity`/`NaN`; written with
 `allow_nan=False`); `live_france.json`, `grid_europe.json` and

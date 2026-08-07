@@ -31,14 +31,25 @@ fi
 
 echo "$(date -u +%FT%TZ) starting reanalysis refresh (FE_TODAY=$FE_TODAY, require>=$FE_REQUIRE_ERA5T_THROUGH)" >>"$LOG"
 
-# 1. Coarse grid + live event on reanalysis (event field re-run; GEV fits reused).
-#    No --reuse-event: we WANT the fresh reanalysis event.
+# 1. Coarse grid event field on reanalysis (event field re-run; GEV fits reused).
+#    No --reuse-event: we WANT the fresh reanalysis event. This writes
+#    output/grid_europe.json only -- NOT live_france.json (that is live_value's job).
 if ! "$PIXI" run python -m precompute.grid >>"$LOG" 2>&1; then
   echo "$(date -u +%FT%TZ) precompute.grid aborted (reanalysis not ready yet?). Will retry." >>"$LOG"
   exit 1
 fi
 
-# 2. Fine local_txx grid + France-peak (climatology cache reused).
+# 2. Live headline (regional_mean_tasmax + blend_provenance) on reanalysis. grid.py
+#    does not write live_france.json, so without this the headline stays on the old
+#    forecast blend. With FE_TODAY pinned in the past, choose_cycles drops the (now
+#    future-issued) forecast cycle, so the blend is pure reanalysis over the window.
+if ! "$PIXI" run python -m precompute.live_value --region france >>"$LOG" 2>&1; then
+  echo "$(date -u +%FT%TZ) precompute.live_value failed." >>"$LOG"
+  exit 1
+fi
+
+# 3. Fine local_txx grid + France-peak (climatology cache reused). Runs last so the
+#    fresh france_peak is merged into the freshly-written live_france.json headline.
 if ! "$PIXI" run python -m precompute.local_peak >>"$LOG" 2>&1; then
   echo "$(date -u +%FT%TZ) precompute.local_peak failed." >>"$LOG"
   exit 1
